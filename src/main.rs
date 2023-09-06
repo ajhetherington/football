@@ -25,18 +25,4 @@ fn main() {
 
     render_something()
 
-    // let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
-    // let (mut window, events) = glfw.create_window(300, 300, "Hello this is window", glfw::WindowMode::Windowed)
-        // .expect("Failed to create GLFW window.");
-
-    // window.set_key_polling(true);
-    // window.make_current();
-
-    // while !window.should_close() {
-        // glfw.poll_events();
-        // for (_, event) in glfw::flush_messages(&events) {
-            // handle_window_event(&mut window, event);
-        // }
-    // }
 }
