@@ -16,7 +16,7 @@ sudo sh -c "dbus-uuidgen > /etc/machine-id"
 ## Append the following to your ~/.bashrc or ~/.zshrc, remember to resource
 # X Server
 export $(dbus-launch) # not needed if you have systemd enabled
-export LIBGL_ALWAYS_INDIRECT=1
+export LIBGL_ALWAYS_INDIRECT=0 # conflicting on whether this is needed... setting to 0 fixed raylib
 
 export DISPLAY=$(route.exe print | grep 0.0.0.0 | head -1 | awk '{print $4}'):0.0 
 ```
@@ -37,3 +37,6 @@ For development, you need
 2. Startup vscode & go to the `football` project
 3. run `xeyes` to make sure it's working
 4. `cargo run`, should output a window
+
+
+### Update

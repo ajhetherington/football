@@ -1,11 +1,11 @@
-extern crate glfw;
 
 mod player;
 mod team;
 use player::Player;
 use team::Team;
+mod render;
+use render::render_something;
 
-use glfw::{Action, Context, Key};
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
     [&players[0], &players[0], &players[0], &players[0], &players[0]]
@@ -23,27 +23,20 @@ fn main() {
     
     println!("This is the team {:?}", dyslexia_untied);
 
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    render_something()
 
-    let (mut window, events) = glfw.create_window(300, 300, "Hello this is window", glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
+    // let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-    window.set_key_polling(true);
-    window.make_current();
+    // let (mut window, events) = glfw.create_window(300, 300, "Hello this is window", glfw::WindowMode::Windowed)
+        // .expect("Failed to create GLFW window.");
 
-    while !window.should_close() {
-        glfw.poll_events();
-        for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event);
-        }
-    }
-}
+    // window.set_key_polling(true);
+    // window.make_current();
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
-    match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true)
-        }
-        _ => {}
-    }
+    // while !window.should_close() {
+        // glfw.poll_events();
+        // for (_, event) in glfw::flush_messages(&events) {
+            // handle_window_event(&mut window, event);
+        // }
+    // }
 }
