@@ -9,6 +9,7 @@ use pitch::*;
 use player::Player;
 use rand::prelude::*;
 use raylib::prelude::*;
+use std::time::Instant;
 use team::*;
 use visibleplayer::*;
 use window::*;
@@ -115,8 +116,29 @@ pub fn render_something() {
     let mut ball = Ball::new(130, 240);
     let mut rng = rand::thread_rng();
     let mut kick_timeout: usize = 0;
+    rl.set_target_fps(60);
+    let start_time: Instant = Instant::now();
+    // if we are past this many seconds since last phyics update,
+    // then we need to update physics the many times we are over
+    // ie the quotient many times
+    const PHYSICS_TICK_RATE: f32 = 1.0 / 60.0; // in seconds
+    let mut last_physics_update_time = start_time;
+    let mut current_frame_time: Instant;
+    let mut frame_updates = 0;
 
     while !rl.window_should_close() {
+        current_frame_time = Instant::now();
+        let n_physics_updates = (current_frame_time
+            .duration_since(last_physics_update_time)
+            .as_secs_f32()
+            / PHYSICS_TICK_RATE)
+            .floor() as i32;
+        if n_physics_updates > 0 {
+            last_physics_update_time = current_frame_time;
+            println!("we need to update physics {}", frame_updates);
+            frame_updates += 1;
+        }
+
         if kick_timeout > 0 {
             kick_timeout -= 1;
         }
@@ -182,6 +204,7 @@ pub fn render_something() {
                 Color::BLUE,
             )
         }
+        d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
         d.draw_circle(
             ball_position[0].floor() as i32,
             ball_position[1].floor() as i32,
