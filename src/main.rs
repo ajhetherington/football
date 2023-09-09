@@ -1,14 +1,17 @@
+mod ball;
+mod pitch;
 mod player;
 mod team;
 mod visibleplayer;
-mod pitch;
 mod window;
+use ball::*;
+use pitch::*;
 use player::Player;
+use rand::prelude::*;
 use raylib::prelude::*;
 use team::*;
 use visibleplayer::*;
 use window::*;
-use pitch::*;
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
     [
@@ -39,25 +42,25 @@ fn main() {
     render_something()
 }
 
-
-fn start_positions(team: Team, screen: &ScreenSize) -> [Position; 5] {
+fn start_positions(team: Team, pitch: &Pitch) -> [Position; 5] {
     let player_x_position: f32;
     match team.side {
         TeamSide::Home => {
-            player_x_position = screen.width as f32 * 0.25;
+            player_x_position = pitch.width as f32 * 0.25;
         }
         TeamSide::Away => {
-            player_x_position = screen.width as f32 * 0.75;
+            player_x_position = pitch.width as f32 * 0.75;
         }
     }
-    let padding: f32 = screen.height as f32 / 10.0;
-    let player_y_gap = (screen.height - (2.0 * padding).floor() as usize) / team.players.len();
+    let padding: f32 = pitch.height as f32 / 10.0;
+    let player_y_gap =
+        (pitch.height - (2.0 * padding).floor() as i32) / (team.players.len() as i32 - 1);
     let mut positions: [Position; 5] = Default::default();
     let mut multiplier: f32 = 0.0;
     for pos in positions.iter_mut() {
         *pos = Position {
-            x_position: player_x_position,
-            y_position: padding + (player_y_gap as f32 * multiplier),
+            x_position: player_x_position + (pitch.x as f32),
+            y_position: padding + (pitch.y as f32) + (player_y_gap as f32 * multiplier),
         };
         multiplier = multiplier + 1.0
     }
@@ -80,7 +83,7 @@ pub fn render_something() {
         get_player_ref(&team1Players),
         TeamSide::Home,
     );
-    let start_positions_team_1 = start_positions(team1, &screen);
+    let start_positions_team_1 = start_positions(team1, &pitch);
     println!("{:?}", start_positions_team_1);
     let mut team1VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_1.iter().zip(team1Players.iter()) {
@@ -96,7 +99,7 @@ pub fn render_something() {
         get_player_ref(&team2Players),
         TeamSide::Away,
     );
-    let start_positions_team_2 = start_positions(team2, &screen);
+    let start_positions_team_2 = start_positions(team2, &pitch);
     let mut team2VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_2.iter().zip(team1Players.iter()) {
         team2VisiblePlayers.push(VisiblePlayer {
@@ -109,7 +112,23 @@ pub fn render_something() {
     const PLAYER_RADIUS: f32 = 10.0;
     let ball_radius: f32 = PLAYER_RADIUS;
 
+    let mut ball = Ball::new(130, 240);
+    let mut rng = rand::thread_rng();
+    let mut kick_timeout: usize = 0;
+
     while !rl.window_should_close() {
+        if kick_timeout > 0 {
+            kick_timeout -= 1;
+        }
+        if rl.is_key_down(KeyboardKey::KEY_ENTER) {
+            if kick_timeout == 0 {
+                ball.kick(
+                    0.4 * (0.5 - rng.gen::<f32>()),
+                    0.4 * (0.5 - rng.gen::<f32>()),
+                );
+                kick_timeout += 200;
+            }
+        }
         if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
             ball_position[0] = ball_position[0] + MOVE_SPEED;
         }
@@ -139,6 +158,13 @@ pub fn render_something() {
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
         d.draw_text("Hello, world", 12, 12, 20, Color::BLACK);
+        d.draw_text(
+            &format!("x: {:?}, y: {:?}", ball_position[0], ball_position[1]),
+            320,
+            12,
+            20,
+            Color::BLACK,
+        );
         render_pitch(&mut d, &pitch);
         for visibleplayer in team1VisiblePlayers.iter() {
             d.draw_circle(
@@ -162,5 +188,7 @@ pub fn render_something() {
             ball_radius,
             Color::ORANGE,
         );
+        ball.update_position(&pitch);
+        ball.display_ball(&mut d);
     }
 }
