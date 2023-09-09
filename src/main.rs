@@ -1,10 +1,14 @@
 mod player;
-mod visibleplayer;
 mod team;
+mod visibleplayer;
+mod pitch;
+mod window;
 use player::Player;
 use raylib::prelude::*;
-use visibleplayer::*;
 use team::*;
+use visibleplayer::*;
+use window::*;
+use pitch::*;
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
     [
@@ -35,18 +39,6 @@ fn main() {
     render_something()
 }
 
-struct ScreenSize {
-    width: usize,
-    height: usize,
-}
-impl ScreenSize {
-    pub fn new() -> Self {
-        ScreenSize {
-            width: (640),
-            height: (480),
-        }
-    }
-}
 
 fn start_positions(team: Team, screen: &ScreenSize) -> [Position; 5] {
     let player_x_position: f32;
@@ -80,6 +72,7 @@ pub fn render_something() {
         .build();
 
     let mut ball_position: Vec<f32> = vec![screen.width as f32 / 2.0, screen.height as f32 / 2.0];
+    let pitch = Pitch::new(&screen);
 
     let team1Players = Team::generate_players();
     let team1 = Team::new(
@@ -146,6 +139,7 @@ pub fn render_something() {
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
         d.draw_text("Hello, world", 12, 12, 20, Color::BLACK);
+        render_pitch(&mut d, &pitch);
         for visibleplayer in team1VisiblePlayers.iter() {
             d.draw_circle(
                 visibleplayer.position.x_position.floor() as i32,
