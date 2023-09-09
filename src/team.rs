@@ -1,14 +1,22 @@
 use crate::player::Player;
 
+
+#[derive(Debug)]
+pub enum TeamSide {
+    Home,
+    Away
+}
+
 #[derive(Debug)]
 pub struct Team<'a> {
-    name: String,
-    players: [&'a Player; 5] // Array of references to 5 player objects
+    pub name: String,
+    pub players: [&'a Player; 5], // Array of references to 5 player objects
+    pub side: TeamSide,
 }
 
 impl<'a> Team<'a> {
-    pub fn new(name: String, players: [&'a Player; 5]) -> Self {
-        Team { name, players }
+    pub fn new(name: String, players: [&'a Player; 5], team_side: TeamSide) -> Self {
+            Team { name, players, side: team_side }
     }
 
     pub fn generate_players() -> [Player; 5] {

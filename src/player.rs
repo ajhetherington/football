@@ -39,8 +39,6 @@ impl PhysicalProfile {
 
 #[derive(Debug)]
 pub struct Player {
-    pub x_position: f32,
-    pub y_position: f32,
     pub name: String,
     pub number: i32,
     pub skills: SkillProfile,
@@ -53,8 +51,6 @@ impl Player {
             Err(String::from("No, Alex Hetherington cannot play football"))
         } else {
             Ok(Player {
-                x_position: 0.0,
-                y_position: 0.0,
                 name,
                 number,
                 skills: SkillProfile::new().unwrap(),
