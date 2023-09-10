@@ -1,10 +1,11 @@
 mod ball;
 mod pitch;
-mod player;
 mod position;
+mod player;
 mod team;
 mod visibleplayer;
 mod window;
+mod gameobject;
 use ball::*;
 use pitch::*;
 use player::Player;
@@ -58,6 +59,7 @@ fn start_positions(team: Team, pitch: &Pitch) -> [Position; 5] {
         (pitch.height - (2.0 * padding).floor() as i32) / (team.players.len() as i32 - 1);
     let mut positions: [Position; 5] = Default::default();
     let mut multiplier: f32 = 0.0;
+    // todo; positions objects are created later, so this can just be x & y
     for pos in positions.iter_mut() {
         *pos = Position {
             x: player_x_position + (pitch.x as f32),
@@ -78,7 +80,7 @@ pub fn render_something() {
         .msaa_4x()
         .build();
 
-    rl.set_target_fps(120);
+    // rl.set_target_fps(120);
 
     let mut ball_position: Vec<f32> = vec![screen.width as f32 / 2.0, screen.height as f32 / 2.0];
     let pitch = Pitch::new(&screen);
@@ -93,10 +95,12 @@ pub fn render_something() {
     println!("{:?}", start_positions_team_1);
     let mut team1VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_1.iter().zip(team1Players.iter()) {
-        team1VisiblePlayers.push(VisiblePlayer {
-            position: *position,
+        team1VisiblePlayers.push(VisiblePlayer::new(
             player,
-        })
+            position.x,
+            position.y,
+            Color::RED,
+        ))
     }
 
     let team2Players = Team::generate_players();
@@ -108,10 +112,12 @@ pub fn render_something() {
     let start_positions_team_2 = start_positions(team2, &pitch);
     let mut team2VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_2.iter().zip(team1Players.iter()) {
-        team2VisiblePlayers.push(VisiblePlayer {
-            position: *position,
+        team2VisiblePlayers.push(VisiblePlayer::new(
             player,
-        })
+            position.x,
+            position.y,
+            Color::BLUE,
+        ))
     }
 
     const MOVE_SPEED: f32 = 0.5;
@@ -129,10 +135,12 @@ pub fn render_something() {
         while time_accumulator >= PHYSICS_TICK_RATE {
             if rl.is_key_down(KeyboardKey::KEY_ENTER) {
                 println!("kicking ball");
-                ball.kick(8.0, -8.0, PHYSICS_TICK_RATE);
+                // todo: going thing.object.apply_force is cumbersome
+                // can instead use traits to add apply_force method to both ball & visibleplayer
+                ball.object.apply_force(8.0, -8.0, PHYSICS_TICK_RATE);
             }
-            ball.apply_friction();
-            ball.update_position(&pitch, PHYSICS_TICK_RATE);
+            ball.object.apply_friction(PHYSICS_TICK_RATE);
+            ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
             move_circle_arrow(&mut rl, &mut ball_position, MOVE_SPEED);
 
             time_accumulator -= PHYSICS_TICK_RATE;
@@ -170,20 +178,10 @@ pub fn render_something() {
         );
         render_pitch(&mut d, &pitch);
         for visibleplayer in team1VisiblePlayers.iter() {
-            d.draw_circle(
-                visibleplayer.position.x.floor() as i32,
-                visibleplayer.position.y.floor() as i32,
-                PLAYER_RADIUS,
-                Color::RED,
-            )
+            visibleplayer.draw(&mut d, alpha);
         }
         for visibleplayer in team2VisiblePlayers.iter() {
-            d.draw_circle(
-                visibleplayer.position.x.floor() as i32,
-                visibleplayer.position.y.floor() as i32,
-                PLAYER_RADIUS,
-                Color::BLUE,
-            )
+            visibleplayer.draw(&mut d, alpha);
         }
         d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
         d.draw_circle(
@@ -193,8 +191,8 @@ pub fn render_something() {
             Color::ORANGE,
         );
         ball.display_ball(&mut d, alpha);
-        d.draw_text(&format!("Ball speed x: {}", ball.x_velocity), 200, 120, 10, Color::BLACK);
-        d.draw_text(&format!("Ball speed y: {}", ball.y_velocity), 200, 100, 10, Color::BLACK);
+        d.draw_text(&format!("Ball speed x: {}", ball.object.x_velocity), 200, 120, 10, Color::BLACK);
+        d.draw_text(&format!("Ball speed y: {}", ball.object.y_velocity), 200, 100, 10, Color::BLACK);
     }
 }
 

@@ -10,5 +10,4 @@ Perhaps try and enable some user input?
 
 Then each player should have their own AI based on their state of understanding of the game.
 
-
 All getting a bit complicated... baby steps
