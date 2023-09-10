@@ -3,6 +3,7 @@ use rand::Rng;
 
 #[derive(Debug, Default)]
 pub struct SkillProfile {
+    pub technique: i32,
     passing: u8,
     shooting: u8,
     tackle: u8,
@@ -13,6 +14,7 @@ impl SkillProfile {
         let mut rng = rand::thread_rng();
         // let random_value: u8 = rng.gen_range(1..=10); // 1 to 10 inclusive
         Ok(SkillProfile {
+            technique: rng.gen_range(1..=10),
             passing: rng.gen_range(1..=10),
             shooting: rng.gen_range(1..=10),
             tackle: rng.gen_range(1..=10),
@@ -22,8 +24,8 @@ impl SkillProfile {
 
 #[derive(Debug, Default)]
 pub struct PhysicalProfile {
-    height: i32,
-    speed: i32,
+    pub speed: i32,
+    pub strength: i32,
 }
 
 impl PhysicalProfile {
@@ -31,8 +33,8 @@ impl PhysicalProfile {
         let mut rng = rand::thread_rng();
         // let random_value: u8 = rng.gen_range(1..=10); // 1 to 10 inclusive
         Ok(PhysicalProfile {
-            height: rng.gen_range(1..=10),
             speed: rng.gen_range(1..=10),
+            strength: rng.gen_range(1..=10),
         })
     }
 }

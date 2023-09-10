@@ -1,16 +1,16 @@
 mod ball;
+mod gameobject;
 mod pitch;
-mod position;
 mod player;
+mod position;
 mod team;
 mod visibleplayer;
 mod window;
-mod gameobject;
 use ball::*;
 use pitch::*;
 use player::Player;
 use position::Position;
-use raylib::prelude::*;
+use raylib::{misc::AsF32, prelude::*};
 use team::*;
 use visibleplayer::*;
 use window::*;
@@ -144,15 +144,35 @@ pub fn render_something() {
             ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
 
             for visibleplayer in team1VisiblePlayers.iter_mut() {
-                visibleplayer.handle_user_input(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
                 visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+                if visibleplayer.is_movable() & rl.is_key_down(KeyboardKey::KEY_X) {
+                    let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
+                    let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
+                    visibleplayer.handle_kick_ball(
+                        &pitch,
+                        &mut ball,
+                        x_dir,
+                        y_dir,
+                        PHYSICS_TICK_RATE,
+                    );
+                }
             }
             for visibleplayer in team2VisiblePlayers.iter_mut() {
-                visibleplayer.handle_user_input(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
                 visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+                if visibleplayer.is_movable() & rl.is_key_down(KeyboardKey::KEY_X) {
+                    let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
+                    let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
+                    visibleplayer.handle_kick_ball(
+                        &pitch,
+                        &mut ball,
+                        x_dir,
+                        y_dir,
+                        PHYSICS_TICK_RATE,
+                    );
+                }
             }
-
-
 
             move_circle_arrow(&mut rl, &mut ball_position, MOVE_SPEED);
 
@@ -204,8 +224,20 @@ pub fn render_something() {
             Color::ORANGE,
         );
         ball.display_ball(&mut d, alpha);
-        d.draw_text(&format!("Ball speed x: {}", ball.object.x_velocity), 200, 120, 10, Color::BLACK);
-        d.draw_text(&format!("Ball speed y: {}", ball.object.y_velocity), 200, 100, 10, Color::BLACK);
+        d.draw_text(
+            &format!("Ball speed x: {}", ball.object.x_velocity),
+            200,
+            120,
+            10,
+            Color::BLACK,
+        );
+        d.draw_text(
+            &format!("Ball speed y: {}", ball.object.y_velocity),
+            200,
+            100,
+            10,
+            Color::BLACK,
+        );
     }
 }
 

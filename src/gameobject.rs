@@ -53,10 +53,12 @@ impl GameObject {
 
     fn check_wall_collisions(
         &mut self,
-        mut updated_x_position: f32,
-        mut updated_y_position: f32,
+        x_position: f32,
+        y_position: f32,
         pitch: &Pitch,
-    ) {
+    ) -> (f32, f32) {
+        let mut updated_x_position = x_position;
+        let mut updated_y_position = y_position;
         // checking
         if updated_x_position <= (pitch.x as f32) + self.radius {
             updated_x_position = (pitch.x as f32) + self.radius;
@@ -77,13 +79,15 @@ impl GameObject {
             self.y_velocity = -1.0 * ELASTICITY * WALL_FRICTION * self.y_velocity;
             self.x_velocity = WALL_FRICTION * self.x_velocity;
         }
+
+        (updated_x_position, updated_y_position)
     }
 
     pub fn update_position(&mut self, pitch: &Pitch, dt: f32) {
         let mut updated_x_position = self.pos.x + (self.x_velocity * dt);
         let mut updated_y_position = self.pos.y + (self.y_velocity * dt);
 
-        self.check_wall_collisions(updated_x_position, updated_y_position, pitch);
+        (updated_x_position, updated_y_position) = self.check_wall_collisions(updated_x_position, updated_y_position, pitch);
 
         self.pos.prev_x = self.pos.x;
         self.pos.prev_y = self.pos.y;
