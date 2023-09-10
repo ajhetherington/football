@@ -1,7 +1,7 @@
 extern crate rand;
 use rand::Rng;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SkillProfile {
     passing: u8,
     shooting: u8,
@@ -20,7 +20,7 @@ impl SkillProfile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PhysicalProfile {
     height: i32,
     speed: i32,
@@ -37,7 +37,7 @@ impl PhysicalProfile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Player {
     pub name: String,
     pub number: i32,

@@ -1,4 +1,5 @@
 use crate::player::Player;
+use crate::position::Position;
 
 enum PlayerActions {
     Shoot,
@@ -7,11 +8,7 @@ enum PlayerActions {
     NoAction,
 }
 
-#[derive(Default, Clone, Copy, Debug)]
-pub struct Position {
-    pub x_position: f32,
-    pub y_position: f32,
-}
+#[derive(Clone, Copy, Debug)]
 
 pub struct VisiblePlayer<'a> {
     pub position: Position,
@@ -25,8 +22,10 @@ impl<'a> VisiblePlayer<'a> {
             None => VisiblePlayer {
                 player,
                 position: Position {
-                    x_position: 0.0,
-                    y_position: 0.0,
+                    x: 0.0,
+                    y: 0.0,
+                    prev_x: 0.0,
+                    prev_y: 0.0
                 },
             },
         }
