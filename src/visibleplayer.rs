@@ -57,7 +57,7 @@ impl<'a> VisiblePlayer<'a> {
 
     }
 
-    pub fn handle_kick_ball(&mut self, pitch: &Pitch, ball: &mut Ball, x_dir: f32, y_dir: f32, dt: f32) {
+    pub fn handle_kick_ball(&mut self, ball: &mut Ball, x_dir: f32, y_dir: f32, dt: f32) {
         // ok, so first check whether we can hit the ball
         // then just apply a big force in a particular direction
         if !(self.movable) {
@@ -66,6 +66,7 @@ impl<'a> VisiblePlayer<'a> {
         let (x_partial, y_partial) = normalize(x_dir, y_dir);
         let mut force = self.player.physicals.strength as f32;
         force *= 10.0;
+        force += 100.0;
         let accuracy = self.player.skills.technique as f32;
 
         ball.object.apply_force(force * x_partial, force * y_partial, dt)

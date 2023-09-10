@@ -80,9 +80,8 @@ pub fn render_something() {
         .msaa_4x()
         .build();
 
-    // rl.set_target_fps(120);
+    rl.set_target_fps(120);
 
-    let mut ball_position: Vec<f32> = vec![screen.width as f32 / 2.0, screen.height as f32 / 2.0];
     let pitch = Pitch::new(&screen);
 
     let team1Players = Team::generate_players();
@@ -120,14 +119,11 @@ pub fn render_something() {
         ))
     }
 
-    const MOVE_SPEED: f32 = 0.5;
-    const PLAYER_RADIUS: f32 = 10.0;
-    let ball_radius: f32 = PLAYER_RADIUS;
-
-    let mut ball = Ball::new(130.0, 240.0);
     const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
+    let mut ball = Ball::new(130.0, 240.0);
     let mut time_accumulator: f32 = 0.0;
     team1VisiblePlayers[0].to_movable();
+    let mut score: u8 = 0;
 
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
     while !rl.window_should_close() {
@@ -144,66 +140,51 @@ pub fn render_something() {
             ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
 
             for visibleplayer in team1VisiblePlayers.iter_mut() {
-                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
-                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-                if visibleplayer.is_movable() & rl.is_key_down(KeyboardKey::KEY_X) {
+                if visibleplayer.is_movable()
+                    & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON)
+                {
                     let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
                     let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-                    visibleplayer.handle_kick_ball(
-                        &pitch,
-                        &mut ball,
-                        x_dir,
-                        y_dir,
-                        PHYSICS_TICK_RATE,
-                    );
+                    visibleplayer.handle_kick_ball(&mut ball, x_dir, y_dir, PHYSICS_TICK_RATE);
                 }
+                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
             }
             for visibleplayer in team2VisiblePlayers.iter_mut() {
-                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
-                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-                if visibleplayer.is_movable() & rl.is_key_down(KeyboardKey::KEY_X) {
+                if visibleplayer.is_movable()
+                    & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON)
+                {
                     let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
                     let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-                    visibleplayer.handle_kick_ball(
-                        &pitch,
-                        &mut ball,
-                        x_dir,
-                        y_dir,
-                        PHYSICS_TICK_RATE,
-                    );
+                    visibleplayer.handle_kick_ball(&mut ball, x_dir, y_dir, PHYSICS_TICK_RATE);
                 }
+                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
             }
-
-            move_circle_arrow(&mut rl, &mut ball_position, MOVE_SPEED);
+            let goal = pitch.check_goal(&ball);
+            match goal {
+                Some(g) => {
+                    println!("hi, there appears to be a goal for {:?}", g);
+                    match g {
+                        Goal::HOME => score = 1,
+                        Goal::AWAY => score = 2
+                    }
+                    
+                },
+                _ => {}
+            }
 
             time_accumulator -= PHYSICS_TICK_RATE;
         }
 
         let alpha = time_accumulator / PHYSICS_TICK_RATE;
 
-        // then apply part of velocity to position
-        // ball.update_position(&pitch, alpha);
-
-        if ball_position[0] < ball_radius {
-            ball_position[0] = ball_radius;
-        }
-        if ball_position[0] > (screen.width as f32) - ball_radius {
-            ball_position[0] = (screen.width as f32) - ball_radius;
-        }
-        if ball_position[1] < ball_radius {
-            ball_position[1] = ball_radius;
-        }
-        if ball_position[1] > (screen.height as f32) - ball_radius {
-            ball_position[1] = (screen.height as f32) - ball_radius;
-        }
-
         // display / render
         // only use interpolate when rendering, don't update actual position states
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
-        d.draw_text("Hello, world", 12, 12, 20, Color::BLACK);
         d.draw_text(
-            &format!("x: {:?}, y: {:?}", ball_position[0], ball_position[1]),
+            &format!("ball x: {:?}, y: {:?}", ball.object.pos.x, ball.object.pos.y),
             320,
             12,
             20,
@@ -217,12 +198,6 @@ pub fn render_something() {
             visibleplayer.draw(&mut d, alpha);
         }
         d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
-        d.draw_circle(
-            ball_position[0].floor() as i32,
-            ball_position[1].floor() as i32,
-            ball_radius,
-            Color::ORANGE,
-        );
         ball.display_ball(&mut d, alpha);
         d.draw_text(
             &format!("Ball speed x: {}", ball.object.x_velocity),
@@ -238,20 +213,11 @@ pub fn render_something() {
             10,
             Color::BLACK,
         );
-    }
-}
 
-fn move_circle_arrow(rl: &mut RaylibHandle, ball_position: &mut Vec<f32>, MOVE_SPEED: f32) {
-    if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
-        ball_position[0] = ball_position[0] + MOVE_SPEED;
-    }
-    if rl.is_key_down(KeyboardKey::KEY_LEFT) {
-        ball_position[0] = ball_position[0] - MOVE_SPEED;
-    }
-    if rl.is_key_down(KeyboardKey::KEY_UP) {
-        ball_position[1] = ball_position[1] - MOVE_SPEED;
-    }
-    if rl.is_key_down(KeyboardKey::KEY_DOWN) {
-        ball_position[1] = ball_position[1] + MOVE_SPEED;
+        if score > 0 {
+            d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
+        }
+
+
     }
 }
