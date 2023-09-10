@@ -119,7 +119,7 @@ pub fn render_something() {
     let ball_radius: f32 = PLAYER_RADIUS;
 
     let mut ball = Ball::new(130.0, 240.0);
-    const PHYSICS_TICK_RATE: f32 = 1.0 / 60.0; // in seconds
+    const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
     let mut time_accumulator: f32 = 0.0;
 
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
@@ -129,7 +129,7 @@ pub fn render_something() {
         while time_accumulator >= PHYSICS_TICK_RATE {
             if rl.is_key_down(KeyboardKey::KEY_ENTER) {
                 println!("kicking ball");
-                ball.kick(4.0, -4.0, PHYSICS_TICK_RATE);
+                ball.kick(8.0, -8.0, PHYSICS_TICK_RATE);
             }
             ball.apply_friction();
             ball.update_position(&pitch, PHYSICS_TICK_RATE);
@@ -193,8 +193,8 @@ pub fn render_something() {
             Color::ORANGE,
         );
         ball.display_ball(&mut d, alpha);
-        d.draw_text(&format!("{}", ball.speed_y()), 200, 100, 10, Color::BLACK);
-        d.draw_text(&format!("{}", ball.speed_x()), 200, 120, 10, Color::BLACK);
+        d.draw_text(&format!("Ball speed x: {}", ball.x_velocity), 200, 120, 10, Color::BLACK);
+        d.draw_text(&format!("Ball speed y: {}", ball.y_velocity), 200, 100, 10, Color::BLACK);
     }
 }
 

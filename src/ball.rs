@@ -6,9 +6,9 @@ use crate::position::Position;
 
 #[derive(Debug)]
 pub struct Ball {
-    pos: Position,
-    x_velocity: f32,
-    y_velocity: f32,
+    pub pos: Position,
+    pub x_velocity: f32,
+    pub y_velocity: f32,
     radius: f32,
     mass: f32,
     friction: f32,
@@ -17,23 +17,13 @@ pub struct Ball {
 impl Ball {
     pub fn new(x: f32, y: f32) -> Self {
         return Ball {
-            pos: Position {x, y, prev_x: 0.0,prev_y: 0.0},
+            pos: Position {x, y, prev_x: 0.0, prev_y: 0.0},
             x_velocity: 0.0,
             y_velocity: 0.0,
             radius: 8.0,
-            mass: 2.0,
-            friction: 0.95,
+            mass: 0.30,
+            friction: 0.99,
         };
-    }
-    pub fn speed_x(&mut self) -> f32 {
-        self.x_velocity.abs()
-    }
-    pub fn speed_y(&mut self) -> f32 {
-        self.y_velocity.abs()
-    }
-
-    pub fn speed(&mut self) -> f32 {
-        ((2.0 as f32).powf(self.x_velocity).sqrt() +  (2.0 as f32).powf(self.y_velocity).sqrt()) / 2.0
     }
 
     pub fn kick(&mut self, force_x: f32, force_y: f32, dt: f32) {
@@ -47,8 +37,12 @@ impl Ball {
     pub fn apply_friction(&mut self) {
         self.x_velocity *= self.friction;
         self.y_velocity *= self.friction;
-        self.x_velocity = (self.x_velocity * 10000.0).floor() / 10000.0;
-        self.y_velocity = (self.y_velocity * 10000.0).floor() / 10000.0;
+        if self.x_velocity.abs() < 0.001 {
+            self.x_velocity = 0.0
+        }
+        if self.y_velocity.abs() < 0.001 {
+            self.y_velocity = 0.0
+        }
     }
 
     pub fn update_position(&mut self, pitch: &Pitch, dt: f32) {
