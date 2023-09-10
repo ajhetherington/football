@@ -11,19 +11,7 @@ pub struct Ball {
 impl Ball {
     pub fn new(x: f32, y: f32) -> Self {
         return Ball {
-            object: GameObject {
-                pos: Position {
-                    x,
-                    y,
-                    prev_x: x,
-                    prev_y: y,
-                },
-                x_velocity: 0.0,
-                y_velocity: 0.0,
-                radius: 8.0,
-                mass: 0.30,
-                friction: 0.99,
-            },
+            object: GameObject::new(x, y, 8.0, 0.3, 0.99),
         };
     }
 

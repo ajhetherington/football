@@ -1,6 +1,6 @@
-use std::f32::consts::E;
-use crate::position::Position;
 use crate::pitch::Pitch;
+use crate::position::Position;
+use std::f32::consts::E;
 
 #[derive(Debug, Copy, Clone)]
 pub struct GameObject {
@@ -8,14 +8,30 @@ pub struct GameObject {
     pub x_velocity: f32,
     pub y_velocity: f32,
     pub radius: f32,
-    pub mass: f32,
-    pub friction: f32,
+    mass: f32,
+    friction: f32,
 }
 
 const WALL_FRICTION: f32 = 0.99;
 const ELASTICITY: f32 = 0.9;
 
 impl GameObject {
+    pub fn new(x: f32, y: f32, radius: f32, mass: f32, friction: f32) -> Self {
+        GameObject {
+            pos: Position {
+                x,
+                y,
+                prev_x: x,
+                prev_y: y,
+            },
+            x_velocity: 0.0,
+            y_velocity: 0.0,
+            radius,
+            mass,
+            friction,
+        }
+    }
+
     pub fn apply_force(&mut self, force_x: f32, force_y: f32, dt: f32) {
         let accel_x = force_x / self.mass;
         let accel_y = force_y / self.mass;
@@ -35,7 +51,12 @@ impl GameObject {
         }
     }
 
-    fn check_wall_collisions(&mut self, mut updated_x_position: f32, mut updated_y_position: f32, pitch: &Pitch ) {
+    fn check_wall_collisions(
+        &mut self,
+        mut updated_x_position: f32,
+        mut updated_y_position: f32,
+        pitch: &Pitch,
+    ) {
         // checking
         if updated_x_position <= (pitch.x as f32) + self.radius {
             updated_x_position = (pitch.x as f32) + self.radius;
@@ -56,7 +77,6 @@ impl GameObject {
             self.y_velocity = -1.0 * ELASTICITY * WALL_FRICTION * self.y_velocity;
             self.x_velocity = WALL_FRICTION * self.x_velocity;
         }
-
     }
 
     pub fn update_position(&mut self, pitch: &Pitch, dt: f32) {

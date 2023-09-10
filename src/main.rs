@@ -127,6 +127,7 @@ pub fn render_something() {
     let mut ball = Ball::new(130.0, 240.0);
     const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
     let mut time_accumulator: f32 = 0.0;
+    team1VisiblePlayers[0].to_movable();
 
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
     while !rl.window_should_close() {
@@ -141,6 +142,18 @@ pub fn render_something() {
             }
             ball.object.apply_friction(PHYSICS_TICK_RATE);
             ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
+
+            for visibleplayer in team1VisiblePlayers.iter_mut() {
+                visibleplayer.handle_user_input(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+            }
+            for visibleplayer in team2VisiblePlayers.iter_mut() {
+                visibleplayer.handle_user_input(&mut rl, PHYSICS_TICK_RATE);
+                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+            }
+
+
+
             move_circle_arrow(&mut rl, &mut ball_position, MOVE_SPEED);
 
             time_accumulator -= PHYSICS_TICK_RATE;
