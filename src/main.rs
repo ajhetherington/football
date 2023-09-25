@@ -6,6 +6,7 @@ mod position;
 mod team;
 mod visibleplayer;
 mod window;
+mod getstate;
 use ball::*;
 use pitch::*;
 use player::Player;
@@ -14,6 +15,8 @@ use raylib::{misc::AsF32, prelude::*};
 use team::*;
 use visibleplayer::*;
 use window::*;
+use getstate::RedisState;
+
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
     [
@@ -44,7 +47,7 @@ fn main() {
     render_something()
 }
 
-fn start_positions(team: Team, pitch: &Pitch) -> [Position; 5] {
+fn start_positions(team: &Team, pitch: &Pitch) -> [Position; 5] {
     let player_x_position: f32;
     match team.side {
         TeamSide::Home => {
@@ -90,7 +93,7 @@ pub fn render_something() {
         get_player_ref(&team1Players),
         TeamSide::Home,
     );
-    let start_positions_team_1 = start_positions(team1, &pitch);
+    let start_positions_team_1 = start_positions(&team1, &pitch);
     println!("{:?}", start_positions_team_1);
     let mut team1VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_1.iter().zip(team1Players.iter()) {
@@ -108,7 +111,7 @@ pub fn render_something() {
         get_player_ref(&team2Players),
         TeamSide::Away,
     );
-    let start_positions_team_2 = start_positions(team2, &pitch);
+    let start_positions_team_2 = start_positions(&team2, &pitch);
     let mut team2VisiblePlayers: Vec<VisiblePlayer> = Vec::new();
     for (position, player) in start_positions_team_2.iter().zip(team1Players.iter()) {
         team2VisiblePlayers.push(VisiblePlayer::new(
@@ -130,6 +133,8 @@ pub fn render_something() {
         time_accumulator += rl.get_frame_time();
 
         while time_accumulator >= PHYSICS_TICK_RATE {
+            log_redis_state(&team1, &team2);
+
             if rl.is_key_down(KeyboardKey::KEY_ENTER) {
                 println!("kicking ball");
                 // todo: going thing.object.apply_force is cumbersome
@@ -220,4 +225,9 @@ pub fn render_something() {
 
 
     }
+}
+
+
+fn log_redis_state(team1: &Team, team2: &Team) {
+    team1.players[0].get_state()
 }
