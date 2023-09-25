@@ -7,6 +7,8 @@ mod team;
 mod visibleplayer;
 mod window;
 mod getstate;
+use ::core::panic;
+
 use ball::*;
 use pitch::*;
 use player::Player;
@@ -16,6 +18,8 @@ use team::*;
 use visibleplayer::*;
 use window::*;
 use getstate::RedisState;
+extern crate redis;
+use redis::Commands;
 
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
@@ -128,12 +132,19 @@ pub fn render_something() {
     team1VisiblePlayers[0].to_movable();
     let mut score: u8 = 0;
 
+    let client = redis::Client::open("redis://127.0.0.1/");
+    let result_con = match client {
+        Ok(cl) => cl.get_connection(),
+        Err(error) => panic!("problem getting redis connection")
+    };
+    let mut con: redis::Connection = result_con.unwrap();
+
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
     while !rl.window_should_close() {
         time_accumulator += rl.get_frame_time();
 
         while time_accumulator >= PHYSICS_TICK_RATE {
-            log_redis_state(&team1, &team2);
+            log_redis_state(&team1VisiblePlayers[0], &mut con);
 
             if rl.is_key_down(KeyboardKey::KEY_ENTER) {
                 println!("kicking ball");
@@ -228,6 +239,7 @@ pub fn render_something() {
 }
 
 
-fn log_redis_state(team1: &Team, team2: &Team) {
-    team1.players[0].get_state()
+fn log_redis_state(visibleplayer: &VisiblePlayer, con: &mut redis::Connection) {
+    let _: () = con.set("player1",visibleplayer.get_state()).unwrap();
+    return
 }

@@ -1,14 +1,12 @@
-use crate::player::Player;
+use crate::visibleplayer::VisiblePlayer;
 
 
 pub trait RedisState {
-    fn get_state(&self) {
-
-    }
+    fn get_state(&self) -> String;
 }
 
-impl RedisState for &Player {
-    fn get_state(&self) {
-        println!("{:?}", self.name)
+impl<'a> RedisState for VisiblePlayer<'a> {
+    fn get_state(&self) -> String {
+        self.object.pos.x.to_string()
     }
 }
