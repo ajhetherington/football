@@ -1,15 +1,17 @@
 mod ball;
 mod gameobject;
+mod getstate;
 mod pitch;
 mod player;
 mod position;
 mod team;
 mod visibleplayer;
 mod window;
-mod getstate;
 use ::core::panic;
+use std::result;
 
 use ball::*;
+use getstate::RedisState;
 use pitch::*;
 use player::Player;
 use position::Position;
@@ -17,10 +19,10 @@ use raylib::{misc::AsF32, prelude::*};
 use team::*;
 use visibleplayer::*;
 use window::*;
-use getstate::RedisState;
 extern crate redis;
-use redis::Commands;
+use redis::PubSubCommands;
 
+const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
 
 fn get_player_ref<'a>(players: &'a [Player; 5]) -> [&'a Player; 5] {
     [
@@ -135,72 +137,48 @@ pub fn render_something() {
     let client = redis::Client::open("redis://127.0.0.1/");
     let result_con = match client {
         Ok(cl) => cl.get_connection(),
-        Err(error) => panic!("problem getting redis connection")
+        Err(error) => panic!("problem getting redis connection"),
     };
     let mut con: redis::Connection = result_con.unwrap();
+    // this below will actaully block, which might be useful when we want to communcate
+    // We can delay all physics updates until all the players have moves to execute
+    // for now, just try with one player
+    let _ = con.subscribe("channel1", |x| {
+        print!(
+            "message out of subscribing to channel1: {:?}",
+            x.get_payload::<String>().unwrap()
+        );
+        return redis::ControlFlow::Break("done");
+    });
+    let mut pubsub = con.as_pubsub();
+    pubsub.subscribe("channel1").unwrap();
 
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
     while !rl.window_should_close() {
         time_accumulator += rl.get_frame_time();
-
         while time_accumulator >= PHYSICS_TICK_RATE {
-            log_redis_state(&team1VisiblePlayers[0], &mut con);
-
-            if rl.is_key_down(KeyboardKey::KEY_ENTER) {
-                println!("kicking ball");
-                // todo: going thing.object.apply_force is cumbersome
-                // can instead use traits to add apply_force method to both ball & visibleplayer
-                ball.object.apply_force(8.0, -8.0, PHYSICS_TICK_RATE);
-            }
-            ball.object.apply_friction(PHYSICS_TICK_RATE);
-            ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
-
-            for visibleplayer in team1VisiblePlayers.iter_mut() {
-                if visibleplayer.is_movable()
-                    & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON)
-                {
-                    let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
-                    let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-                    visibleplayer.handle_kick_ball(&mut ball, x_dir, y_dir, PHYSICS_TICK_RATE);
-                }
-                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
-                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-            }
-            for visibleplayer in team2VisiblePlayers.iter_mut() {
-                if visibleplayer.is_movable()
-                    & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON)
-                {
-                    let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
-                    let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-                    visibleplayer.handle_kick_ball(&mut ball, x_dir, y_dir, PHYSICS_TICK_RATE);
-                }
-                visibleplayer.handle_user_movement(&mut rl, PHYSICS_TICK_RATE);
-                visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-            }
-            let goal = pitch.check_goal(&ball);
-            match goal {
-                Some(g) => {
-                    println!("hi, there appears to be a goal for {:?}", g);
-                    match g {
-                        Goal::HOME => score = 1,
-                        Goal::AWAY => score = 2
-                    }
-                    
-                },
-                _ => {}
-            }
-
+            apply_physics(
+                &mut rl,
+                &mut ball,
+                &mut team1VisiblePlayers,
+                &mut team2VisiblePlayers,
+                &pitch,
+                &mut score,
+            );
             time_accumulator -= PHYSICS_TICK_RATE;
         }
 
-        let alpha = time_accumulator / PHYSICS_TICK_RATE;
+        let alpha: f32 = time_accumulator / PHYSICS_TICK_RATE;
 
         // display / render
         // only use interpolate when rendering, don't update actual position states
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
         d.draw_text(
-            &format!("ball x: {:?}, y: {:?}", ball.object.pos.x, ball.object.pos.y),
+            &format!(
+                "ball x: {:?}, y: {:?}",
+                ball.object.pos.x, ball.object.pos.y
+            ),
             320,
             12,
             20,
@@ -233,13 +211,54 @@ pub fn render_something() {
         if score > 0 {
             d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
         }
-
-
     }
 }
 
 
-fn log_redis_state(visibleplayer: &VisiblePlayer, con: &mut redis::Connection) {
-    let _: () = con.set("player1",visibleplayer.get_state()).unwrap();
-    return
+fn apply_physics(
+    rl: &mut RaylibHandle,
+    ball: &mut Ball,
+    team1VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
+    team2VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
+    pitch: &Pitch,
+    score: &mut u8,
+) {
+    if rl.is_key_down(KeyboardKey::KEY_ENTER) {
+        println!("kicking ball");
+        // todo: going thing.object.apply_force is cumbersome
+        // can instead use traits to add apply_force method to both ball & visibleplayer
+        ball.object.apply_force(8.0, -8.0, PHYSICS_TICK_RATE);
+    }
+    ball.object.apply_friction(PHYSICS_TICK_RATE);
+    ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
+
+    for visibleplayer in team1VisiblePlayers.iter_mut() {
+        if visibleplayer.is_movable() & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
+            let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
+            let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
+            visibleplayer.handle_kick_ball(ball, x_dir, y_dir, PHYSICS_TICK_RATE);
+        }
+        visibleplayer.handle_user_movement(rl, PHYSICS_TICK_RATE);
+        visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+    }
+    for visibleplayer in team2VisiblePlayers.iter_mut() {
+        if visibleplayer.is_movable() & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
+            let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
+            let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
+            visibleplayer.handle_kick_ball(ball, x_dir, y_dir, PHYSICS_TICK_RATE);
+        }
+        visibleplayer.handle_user_movement(rl, PHYSICS_TICK_RATE);
+        visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
+    }
+    let goal = pitch.check_goal(&ball);
+    match goal {
+        Some(g) => {
+            println!("hi, there appears to be a goal for {:?}", g);
+            match g {
+                Goal::HOME => *score = 1,
+                Goal::AWAY => *score = 2,
+            }
+        }
+        _ => {}
+    }
 }
