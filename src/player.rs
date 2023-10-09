@@ -1,7 +1,8 @@
 extern crate rand;
 use rand::Rng;
+use serde::Serialize;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct SkillProfile {
     pub technique: i32,
     passing: u8,
@@ -22,7 +23,7 @@ impl SkillProfile {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct PhysicalProfile {
     pub speed: i32,
     pub strength: i32,
@@ -39,7 +40,7 @@ impl PhysicalProfile {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct Player {
     pub name: String,
     pub number: i32,

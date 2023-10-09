@@ -4,6 +4,7 @@ use crate::player::Player;
 use crate::ball::Ball;
 use raylib::core::drawing::RaylibDrawHandle;
 use raylib::prelude::*;
+use serde::Serialize;
 
 enum PlayerActions {
     Shoot,
@@ -12,12 +13,13 @@ enum PlayerActions {
     NoAction,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize)]
 
 pub struct VisiblePlayer<'a> {
     pub player: &'a Player,
     pub object: GameObject,
     movable: bool,
+    #[serde(skip_serializing)]
     color: Color,
 }
 
@@ -65,7 +67,7 @@ impl<'a> VisiblePlayer<'a> {
         }
         let (x_partial, y_partial) = normalize(x_dir, y_dir);
         let mut force = self.player.physicals.strength as f32;
-        force *= 10.0;
+        force *= 20.0;
         force += 100.0;
         let accuracy = self.player.skills.technique as f32;
 

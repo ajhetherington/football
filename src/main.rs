@@ -20,7 +20,8 @@ use team::*;
 use visibleplayer::*;
 use window::*;
 extern crate redis;
-use redis::PubSubCommands;
+use redis::{PubSubCommands, Commands};
+use serde_json;
 
 const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
 
@@ -150,8 +151,8 @@ pub fn render_something() {
         );
         return redis::ControlFlow::Break("done");
     });
-    let mut pubsub = con.as_pubsub();
-    pubsub.subscribe("channel1").unwrap();
+    // let mut pubsub = con.as_pubsub();
+    // pubsub.subscribe("channel1").unwrap();
 
     // the renderer produces time and the simulation consumes it in discrete dt sized steps
     while !rl.window_should_close() {
@@ -165,6 +166,7 @@ pub fn render_something() {
                 &pitch,
                 &mut score,
             );
+            log_game_state(&mut con, &ball, &team1VisiblePlayers, &team2VisiblePlayers, &pitch, score);
             time_accumulator -= PHYSICS_TICK_RATE;
         }
 
@@ -173,46 +175,76 @@ pub fn render_something() {
         // display / render
         // only use interpolate when rendering, don't update actual position states
         let mut d = rl.begin_drawing(&thread);
-        d.clear_background(Color::WHITE);
-        d.draw_text(
-            &format!(
-                "ball x: {:?}, y: {:?}",
-                ball.object.pos.x, ball.object.pos.y
-            ),
-            320,
-            12,
-            20,
-            Color::BLACK,
-        );
-        render_pitch(&mut d, &pitch);
-        for visibleplayer in team1VisiblePlayers.iter() {
-            visibleplayer.draw(&mut d, alpha);
-        }
-        for visibleplayer in team2VisiblePlayers.iter() {
-            visibleplayer.draw(&mut d, alpha);
-        }
-        d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
-        ball.display_ball(&mut d, alpha);
-        d.draw_text(
-            &format!("Ball speed x: {}", ball.object.x_velocity),
-            200,
-            120,
-            10,
-            Color::BLACK,
-        );
-        d.draw_text(
-            &format!("Ball speed y: {}", ball.object.y_velocity),
-            200,
-            100,
-            10,
-            Color::BLACK,
-        );
-
-        if score > 0 {
-            d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
-        }
+        render(&mut d, 
+            &mut ball,
+            &mut team1VisiblePlayers,
+            &mut team2VisiblePlayers,
+            &pitch,
+            alpha,
+            score
+        )
     }
 }
+
+fn log_game_state(con: &mut redis::Connection, ball: &Ball, team1VisiblePlayers: & Vec<VisiblePlayer<'_>>, team2VisiblePlayers: & Vec<VisiblePlayer<'_>>, pitch: &Pitch, score: u8) {
+    ball.log_in_redis(con, "ball");
+    for player in team1VisiblePlayers.into_iter() {
+        player.log_in_redis(con, player.player.name.as_str());
+    }
+    for player in team2VisiblePlayers.into_iter() {
+        player.log_in_redis(con, player.player.name.as_str());
+    }
+    // let idk = con.publish("channel1", ball.object.pos.x);
+    // match idk {
+    //     Ok(value) => value,
+    //     _ => {}
+    // }
+}
+
+
+pub trait LogInRedis {
+    fn log_in_redis(&self, con: &mut redis::Connection, channel: &str)
+    where 
+        Self: serde::Serialize {
+        let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
+        let succ = con.publish(channel, json_string);
+        match succ {
+            Ok(value) => value,
+            _ => panic!("Failed to write to redis for ball")
+        };
+
+    }
+}
+impl LogInRedis for Ball {}
+impl LogInRedis for Player {}
+impl LogInRedis for VisiblePlayer<'_> {}
+
+
+// ### by using the default implementation above (using the where Self: serde::Serialize)
+// ### I was able to remove the redundent boilerplate below
+
+// impl LogInRedis for Ball {
+//     fn log_in_redis(&self, con: &mut redis::Connection) {
+//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
+//         let succ = con.publish("channel1", json_string);
+//         match succ {
+//             Ok(value) => value,
+//             _ => panic!("Failed to write to redis for ball")
+//         };
+//     }
+// }
+
+
+// impl LogInRedis for Player {
+//     fn log_in_redis(&self, con: &mut redis::Connection) {
+//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
+//         let succ = con.publish("channel1", json_string);
+//         match succ {
+//             Ok(value) => value,
+//             _ => panic!("Failed to write to redis for ball")
+//         };
+//     }
+// }
 
 
 fn apply_physics(
@@ -260,5 +292,48 @@ fn apply_physics(
             }
         }
         _ => {}
+    }
+
+    // should always log state at the end of the game
+}
+
+fn render(d: &mut RaylibDrawHandle, ball: &mut Ball, team1VisiblePlayers: &mut Vec<VisiblePlayer<'_>>, team2VisiblePlayers: &mut Vec<VisiblePlayer<'_>>, pitch: & Pitch, alpha: f32 , score: u8) {
+    d.clear_background(Color::WHITE);
+    d.draw_text(
+        &format!(
+            "ball x: {:?}, y: {:?}",
+            ball.object.pos.x, ball.object.pos.y
+        ),
+        320,
+        12,
+        20,
+        Color::BLACK,
+    );
+    render_pitch(d, &pitch);
+    for visibleplayer in team1VisiblePlayers.iter() {
+        visibleplayer.draw(d, alpha);
+    }
+    for visibleplayer in team2VisiblePlayers.iter() {
+        visibleplayer.draw(d, alpha);
+    }
+    d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
+    ball.display_ball(d, alpha);
+    d.draw_text(
+        &format!("Ball speed x: {}", ball.object.x_velocity),
+        200,
+        120,
+        10,
+        Color::BLACK,
+    );
+    d.draw_text(
+        &format!("Ball speed y: {}", ball.object.y_velocity),
+        200,
+        100,
+        10,
+        Color::BLACK,
+    );
+
+    if score > 0 {
+        d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
     }
 }

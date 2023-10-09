@@ -2,8 +2,9 @@ use crate::gameobject::GameObject;
 use crate::position::Position;
 use raylib::core::drawing::RaylibDrawHandle;
 use raylib::prelude::{Color, RaylibDraw};
+use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Ball {
     pub object: GameObject,
 }
