@@ -1,8 +1,8 @@
 use crate::ball::Ball;
 use crate::window::ScreenSize;
-use macroquad::prelude::*;
-use macroquad::math::{Rect, Vec2};
 use macroquad::color::PINK;
+use macroquad::math::{Rect, Vec2};
+use macroquad::prelude::*;
 
 const GOAL_LENGTH: f32 = 70.0;
 const RECT_WIDTH: f32 = 6.0;
@@ -63,7 +63,7 @@ impl Pitch {
             y: ball.object.pos.y,
         };
         return None;
-        todo!()
+    }
     //     if self
     //         .left_goal
     //         .check_collision_circle_rec(center, ball.object.radius)

@@ -1,5 +1,4 @@
-use serde::Serialize;
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Position {
     pub x: f32,
     pub y: f32,

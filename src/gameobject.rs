@@ -1,9 +1,8 @@
 use crate::pitch::Pitch;
 use crate::position::Position;
 use std::f32::consts::E;
-use serde::Serialize;
 
-#[derive(Debug, Copy, Clone, Serialize)]
+#[derive(Debug, Copy, Clone)]
 pub struct GameObject {
     pub pos: Position,
     pub x_velocity: f32,

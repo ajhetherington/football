@@ -5,13 +5,6 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-# [dependencies.redis]
-# version = "*"
 
 [dependencies]
-serde = {version = "1.0.188", features = ["derive"] }
-serde_json = "1.0"
-rand = "0.8.4"
-getrandom = { version = "0.2", features = ["js"] }
-raylib = "3.7.0"
 macroquad = "0.4.4"

@@ -2,12 +2,11 @@ use crate::ball::Ball;
 use crate::gameobject::GameObject;
 use crate::pitch::Pitch;
 use crate::player::Player;
-use football::MacroColour;
 use macroquad::color::Color;
 use macroquad::input::is_key_down;
+use macroquad::miniquad::KeyCode;
 use macroquad::prelude::QuadGl;
 use macroquad::shapes::draw_circle;
-use serde::Serialize;
 
 enum PlayerActions {
     Shoot,
@@ -16,13 +15,12 @@ enum PlayerActions {
     NoAction,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug)]
 
 pub struct VisiblePlayer<'a> {
     pub player: &'a Player,
     pub object: GameObject,
     movable: bool,
-    #[serde(skip_serializing)]
     color: Color,
 }
 
@@ -42,41 +40,22 @@ impl<'a> VisiblePlayer<'a> {
         self.movable
     }
 
-    pub fn handle_user_movement(&mut self, rl: &mut RaylibHandle, dt: f32) {
-        let movement_force = (self.player.physicals.strength as f32) * 10.0;
-        if !(self.movable) {
-            return;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
-            self.object.apply_force(movement_force, 0.0, dt);
-        }
-        if rl.is_key_down(KeyboardKey::KEY_LEFT) {
-            self.object.apply_force(-movement_force, 0.0, dt);
-        }
-        if rl.is_key_down(KeyboardKey::KEY_UP) {
-            self.object.apply_force(0.0, -movement_force, dt);
-        }
-        if rl.is_key_down(KeyboardKey::KEY_DOWN) {
-            self.object.apply_force(0.0, movement_force, dt);
-        }
-    }
-
     pub fn new_handle_user_movement(&mut self, _qgl: &mut QuadGl, dt: f32) {
         let movement_force = (self.player.physicals.strength as f32) * 10.0;
         if !(self.movable) {
             return;
         }
-        if is_key_down(macroquad::miniquad::KeyCode::Right) {
+        if is_key_down(KeyCode::Right) {
             self.object.apply_force(movement_force, 0.0, dt);
         }
 
-        if is_key_down(macroquad::miniquad::KeyCode::Left) {
+        if is_key_down(KeyCode::Left) {
             self.object.apply_force(-movement_force, 0.0, dt);
         }
-        if is_key_down(macroquad::miniquad::KeyCode::Up) {
+        if is_key_down(KeyCode::Up) {
             self.object.apply_force(0.0, -movement_force, dt);
         }
-        if is_key_down(macroquad::miniquad::KeyCode::Down) {
+        if is_key_down(KeyCode::Down) {
             self.object.apply_force(0.0, movement_force, dt);
         }
     }
@@ -102,14 +81,6 @@ impl<'a> VisiblePlayer<'a> {
         self.object.update_position(pitch, dt);
     }
 
-    pub fn draw(&self, d: &mut RaylibDrawHandle, alpha: f32) {
-        d.draw_circle(
-            self.object.pos.interpolate_x(alpha) as i32,
-            self.object.pos.interpolate_y(alpha) as i32,
-            self.object.radius,
-            self.color,
-        )
-    }
     pub fn new_render(&self, _qgl: &mut QuadGl, alpha: f32) {
         draw_circle(
             self.object.pos.interpolate_x(alpha),
