@@ -19,6 +19,6 @@ jobs:
     - name: Build
       run: apt install pkg-config libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev && rustup target add wasm32-unknown-unknown && cargo build --target wasm32-unknown-unknown 
     - uses: actions/upload-artifact@v4
-    - with: 
+      with: 
         name: football.wasm
         path: target/wasm32-unknown-unknown/debug/football_translate.wasm
