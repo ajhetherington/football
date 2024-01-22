@@ -21,4 +21,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with: 
         name: football.wasm
-        path: /home/runner/work/football/football/target/wasm32-unknown-unknown/debug/football_translate.wasm
+        path: target/wasm32-unknown-unknown/debug/football.wasm
