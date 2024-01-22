@@ -1,5 +1,8 @@
 ## Generic 2D football Project
 
+[![Rust](https://github.com/ajhetherington/football/actions/workflows/rust.yml/badge.svg)](https://github.com/ajhetherington/football/actions/workflows/rust.yml)
+
+
 Hi, welcome to this small repo, i'm working on a sort-of 2d football simulator, there's some general long term goals, but it is really for a bit of fun and to learn more rust.
 
 ~~The initial goal is to render 2 teams of 5 players on a pitch, then it's to try & get them to move randomly on the screen.~~
