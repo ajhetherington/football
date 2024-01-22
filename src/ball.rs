@@ -1,7 +1,7 @@
 use crate::gameobject::GameObject;
 use crate::position::Position;
-use raylib::core::drawing::RaylibDrawHandle;
-use raylib::prelude::{Color, RaylibDraw};
+use macroquad::prelude::*;
+use macroquad::shapes::draw_circle;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -16,12 +16,12 @@ impl Ball {
         };
     }
 
-    pub fn display_ball(&mut self, d: &mut RaylibDrawHandle, alpha: f32) {
-        d.draw_circle(
+    pub fn new_render(&mut self, _qgl: &mut QuadGl, alpha: f32) {
+        draw_circle(
             self.object.pos.interpolate_x(alpha),
             self.object.pos.interpolate_y(alpha),
             self.object.radius,
-            Color::GREEN,
+            macroquad::color::GREEN,
         )
     }
 }

@@ -1,9 +1,12 @@
+use crate::ball::Ball;
 use crate::gameobject::GameObject;
 use crate::pitch::Pitch;
 use crate::player::Player;
-use crate::ball::Ball;
-use raylib::core::drawing::RaylibDrawHandle;
-use raylib::prelude::*;
+use football::MacroColour;
+use macroquad::color::Color;
+use macroquad::input::is_key_down;
+use macroquad::prelude::QuadGl;
+use macroquad::shapes::draw_circle;
 use serde::Serialize;
 
 enum PlayerActions {
@@ -56,7 +59,26 @@ impl<'a> VisiblePlayer<'a> {
         if rl.is_key_down(KeyboardKey::KEY_DOWN) {
             self.object.apply_force(0.0, movement_force, dt);
         }
+    }
 
+    pub fn new_handle_user_movement(&mut self, _qgl: &mut QuadGl, dt: f32) {
+        let movement_force = (self.player.physicals.strength as f32) * 10.0;
+        if !(self.movable) {
+            return;
+        }
+        if is_key_down(macroquad::miniquad::KeyCode::Right) {
+            self.object.apply_force(movement_force, 0.0, dt);
+        }
+
+        if is_key_down(macroquad::miniquad::KeyCode::Left) {
+            self.object.apply_force(-movement_force, 0.0, dt);
+        }
+        if is_key_down(macroquad::miniquad::KeyCode::Up) {
+            self.object.apply_force(0.0, -movement_force, dt);
+        }
+        if is_key_down(macroquad::miniquad::KeyCode::Down) {
+            self.object.apply_force(0.0, movement_force, dt);
+        }
     }
 
     pub fn handle_kick_ball(&mut self, ball: &mut Ball, x_dir: f32, y_dir: f32, dt: f32) {
@@ -71,8 +93,8 @@ impl<'a> VisiblePlayer<'a> {
         force += 100.0;
         let accuracy = self.player.skills.technique as f32;
 
-        ball.object.apply_force(force * x_partial, force * y_partial, dt)
-
+        ball.object
+            .apply_force(force * x_partial, force * y_partial, dt)
     }
 
     pub fn handle_physics(&mut self, pitch: &Pitch, dt: f32) {
@@ -82,10 +104,19 @@ impl<'a> VisiblePlayer<'a> {
 
     pub fn draw(&self, d: &mut RaylibDrawHandle, alpha: f32) {
         d.draw_circle(
+            self.object.pos.interpolate_x(alpha) as i32,
+            self.object.pos.interpolate_y(alpha) as i32,
+            self.object.radius,
+            self.color,
+        )
+    }
+    pub fn new_render(&self, _qgl: &mut QuadGl, alpha: f32) {
+        draw_circle(
             self.object.pos.interpolate_x(alpha),
             self.object.pos.interpolate_y(alpha),
             self.object.radius,
-            self.color,
+            // hack, idk why deref not working
+            self.color.into(),
         )
     }
 }

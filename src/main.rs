@@ -10,18 +10,19 @@ mod window;
 use ::core::panic;
 use std::result;
 
+use football::{get_quad_gl, MacroColour};
+use macroquad::{main, miniquad::window::screen_size, prelude::*};
+
 use ball::*;
 use getstate::RedisState;
 use pitch::*;
 use player::Player;
 use position::Position;
 use raylib::{misc::AsF32, prelude::*};
+use serde_json;
 use team::*;
 use visibleplayer::*;
 use window::*;
-extern crate redis;
-use redis::{PubSubCommands, Commands};
-use serde_json;
 
 const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
 
@@ -125,7 +126,7 @@ pub fn render_something() {
             player,
             position.x,
             position.y,
-            Color::BLUE,
+            macroquad::color::BLACK,
         ))
     }
 
@@ -135,22 +136,30 @@ pub fn render_something() {
     team1VisiblePlayers[0].to_movable();
     let mut score: u8 = 0;
 
-    let client = redis::Client::open("redis://127.0.0.1/");
-    let result_con = match client {
-        Ok(cl) => cl.get_connection(),
-        Err(error) => panic!("problem getting redis connection"),
+    let mut state = GameState {
+        pitch: &pitch,
+        ball: &ball,
+        team1_visible_players: &team1VisiblePlayers,
+        team2_visible_players: &team2VisiblePlayers,
+        score,
     };
-    let mut con: redis::Connection = result_con.unwrap();
+
+    // let client = redis::Client::open("redis://127.0.0.1/");
+    // let result_con = match client {
+    //     Ok(cl) => cl.get_connection(),
+    //     Err(error) => panic!("problem getting redis connection"),
+    // };
+    // let mut con: redis::Connection = result_con.unwrap();
     // this below will actaully block, which might be useful when we want to communcate
     // We can delay all physics updates until all the players have moves to execute
     // for now, just try with one player
-    let _ = con.subscribe("channel1", |x| {
-        print!(
-            "message out of subscribing to channel1: {:?}",
-            x.get_payload::<String>().unwrap()
-        );
-        return redis::ControlFlow::Break("done");
-    });
+    // let _ = con.subscribe("channel1", |x| {
+    //     print!(
+    //         "message out of subscribing to channel1: {:?}",
+    //         x.get_payload::<String>().unwrap()
+    //     );
+    //     return redis::ControlFlow::Break("done");
+    // });
     // let mut pubsub = con.as_pubsub();
     // pubsub.subscribe("channel1").unwrap();
 
@@ -166,7 +175,7 @@ pub fn render_something() {
                 &pitch,
                 &mut score,
             );
-            log_game_state(&mut con, &ball, &team1VisiblePlayers, &team2VisiblePlayers, &pitch, score);
+            // log_game_state(&mut con, &ball, &team1VisiblePlayers, &team2VisiblePlayers, &pitch, score);
             time_accumulator -= PHYSICS_TICK_RATE;
         }
 
@@ -175,50 +184,49 @@ pub fn render_something() {
         // display / render
         // only use interpolate when rendering, don't update actual position states
         let mut d = rl.begin_drawing(&thread);
-        render(&mut d, 
+        render(
+            &mut d,
             &mut ball,
             &mut team1VisiblePlayers,
             &mut team2VisiblePlayers,
             &pitch,
             alpha,
-            score
+            score,
         )
     }
 }
 
-fn log_game_state(con: &mut redis::Connection, ball: &Ball, team1VisiblePlayers: & Vec<VisiblePlayer<'_>>, team2VisiblePlayers: & Vec<VisiblePlayer<'_>>, pitch: &Pitch, score: u8) {
-    ball.log_in_redis(con, "ball");
-    for player in team1VisiblePlayers.into_iter() {
-        player.log_in_redis(con, player.player.name.as_str());
-    }
-    for player in team2VisiblePlayers.into_iter() {
-        player.log_in_redis(con, player.player.name.as_str());
-    }
-    // let idk = con.publish("channel1", ball.object.pos.x);
-    // match idk {
-    //     Ok(value) => value,
-    //     _ => {}
-    // }
-}
+// fn log_game_state(con: &mut redis::Connection, ball: &Ball, team1VisiblePlayers: & Vec<VisiblePlayer<'_>>, team2VisiblePlayers: & Vec<VisiblePlayer<'_>>, pitch: &Pitch, score: u8) {
+//     ball.log_in_redis(con, "ball");
+//     for player in team1VisiblePlayers.into_iter() {
+//         player.log_in_redis(con, player.player.name.as_str());
+//     }
+//     for player in team2VisiblePlayers.into_iter() {
+//         player.log_in_redis(con, player.player.name.as_str());
+//     }
+//     // let idk = con.publish("channel1", ball.object.pos.x);
+//     // match idk {
+//     //     Ok(value) => value,
+//     //     _ => {}
+//     // }
+// }
 
+// pub trait LogInRedis {
+//     fn log_in_redis(&self, con: &mut redis::Connection, channel: &str)
+//     where
+//         Self: serde::Serialize {
+//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
+//         let succ = con.publish(channel, json_string);
+//         match succ {
+//             Ok(value) => value,
+//             _ => panic!("Failed to write to redis for ball")
+//         };
 
-pub trait LogInRedis {
-    fn log_in_redis(&self, con: &mut redis::Connection, channel: &str)
-    where 
-        Self: serde::Serialize {
-        let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
-        let succ = con.publish(channel, json_string);
-        match succ {
-            Ok(value) => value,
-            _ => panic!("Failed to write to redis for ball")
-        };
-
-    }
-}
-impl LogInRedis for Ball {}
-impl LogInRedis for Player {}
-impl LogInRedis for VisiblePlayer<'_> {}
-
+//     }
+// }
+// impl LogInRedis for Ball {}
+// impl LogInRedis for Player {}
+// impl LogInRedis for VisiblePlayer<'_> {}
 
 // ### by using the default implementation above (using the where Self: serde::Serialize)
 // ### I was able to remove the redundent boilerplate below
@@ -234,7 +242,6 @@ impl LogInRedis for VisiblePlayer<'_> {}
 //     }
 // }
 
-
 // impl LogInRedis for Player {
 //     fn log_in_redis(&self, con: &mut redis::Connection) {
 //         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
@@ -246,6 +253,34 @@ impl LogInRedis for VisiblePlayer<'_> {}
 //     }
 // }
 
+fn apply_physics_new(qgl: &mut QuadGl, state: &mut GameState, alpha: f32) {
+    if is_key_down(KeyCode::Enter) {
+        println!("kicking ball");
+        state.ball.object.apply_force(8.0, -8.0, PHYSICS_TICK_RATE);
+    }
+    state.ball.object.apply_friction(PHYSICS_TICK_RATE);
+    state.ball.object.update_position(&state.pitch, PHYSICS_TICK_RATE);
+    for visibleplayer in state.team1_visible_players.iter_mut() {
+        if visibleplayer.is_movable() & is_mouse_button_down(macroquad::input::MouseButton::Left) {
+            let (x,y) = macroquad::input::mouse_position();
+            let x_dir = x - visibleplayer.object.pos.x;
+            let y_dir = y - visibleplayer.object.pos.y;
+            visibleplayer.handle_kick_ball(&mut state.ball, x_dir, y_dir, PHYSICS_TICK_RATE);
+        }
+        visibleplayer.new_handle_user_movement(qgl, PHYSICS_TICK_RATE);
+        visibleplayer.handle_physics(&state.pitch, PHYSICS_TICK_RATE);
+    }
+    for visibleplayer in state.team2_visible_players.iter_mut() {
+        if visibleplayer.is_movable() & is_mouse_button_down(macroquad::input::MouseButton::Left) {
+            let (x,y) = macroquad::input::mouse_position();
+            let x_dir = x - visibleplayer.object.pos.x;
+            let y_dir = y - visibleplayer.object.pos.y;
+            visibleplayer.handle_kick_ball(&mut state.ball, x_dir, y_dir, PHYSICS_TICK_RATE);
+        }
+        visibleplayer.new_handle_user_movement(qgl, PHYSICS_TICK_RATE);
+        visibleplayer.handle_physics(&state.pitch, PHYSICS_TICK_RATE);
+    }
+}
 
 fn apply_physics(
     rl: &mut RaylibHandle,
@@ -293,47 +328,115 @@ fn apply_physics(
         }
         _ => {}
     }
-
     // should always log state at the end of the game
 }
 
-fn render(d: &mut RaylibDrawHandle, ball: &mut Ball, team1VisiblePlayers: &mut Vec<VisiblePlayer<'_>>, team2VisiblePlayers: &mut Vec<VisiblePlayer<'_>>, pitch: & Pitch, alpha: f32 , score: u8) {
-    d.clear_background(Color::WHITE);
-    d.draw_text(
+pub struct GameState<'a> {
+    pub ball: &'a Ball,
+    pub team1_visible_players: &'a Vec<VisiblePlayer<'a>>,
+    pub team2_visible_players: &'a Vec<VisiblePlayer<'a>>,
+    pub pitch: &'a Pitch,
+    pub score: u8,
+}
+
+fn new_render(qgl: &mut QuadGl, state: GameState, alpha: f32) {
+    clear_background(WHITE);
+    draw_text(
         &format!(
             "ball x: {:?}, y: {:?}",
-            ball.object.pos.x, ball.object.pos.y
+            state.ball.object.pos.x, state.ball.object.pos.y
         ),
-        320,
-        12,
-        20,
-        Color::BLACK,
+        320.0,
+        12.0,
+        20.0,
+        macroquad::color::BLACK,
     );
-    render_pitch(d, &pitch);
-    for visibleplayer in team1VisiblePlayers.iter() {
-        visibleplayer.draw(d, alpha);
+    new_render_pitch(qgl, state.pitch);
+    for visibleplayer in state.team1_visible_players.iter() {
+        visibleplayer.new_render(qgl, alpha);
     }
-    for visibleplayer in team2VisiblePlayers.iter() {
-        visibleplayer.draw(d, alpha);
+    for visibleplayer in state.team2_visible_players.iter() {
+        visibleplayer.new_render(qgl, alpha);
     }
-    d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
-    ball.display_ball(d, alpha);
-    d.draw_text(
-        &format!("Ball speed x: {}", ball.object.x_velocity),
-        200,
-        120,
-        10,
-        Color::BLACK,
+    draw_text(
+        &format!("{}", get_fps()),
+        100.0,
+        12.0,
+        10.0,
+        macroquad::color::BLACK,
     );
-    d.draw_text(
-        &format!("Ball speed y: {}", ball.object.y_velocity),
-        200,
-        100,
-        10,
-        Color::BLACK,
+    state.ball.new_render(qgl, alpha);
+    draw_text(
+        &format!("Ball speed x: {}", state.ball.object.x_velocity),
+        200.0,
+        120.0,
+        10.0,
+        macroquad::color::BLACK,
+    );
+    draw_text(
+        &format!("Ball speed y: {}", state.ball.object.y_velocity),
+        200.0,
+        100.0,
+        10.0,
+        macroquad::color::BLACK,
     );
 
-    if score > 0 {
-        d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
+    if state.score > 0 {
+        draw_text(
+            &format!("Score is {:?}", state.score),
+            10.0,
+            200.0,
+            5.0,
+            macroquad::color::GOLD,
+        )
     }
 }
+
+// fn render(
+//     d: &mut RaylibDrawHandle,
+//     ball: &mut Ball,
+//     team1VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
+//     team2VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
+//     pitch: &Pitch,
+//     alpha: f32,
+//     score: u8,
+// ) {
+//     d.clear_background(Color::WHITE);
+//     d.draw_text(
+//         &format!(
+//             "ball x: {:?}, y: {:?}",
+//             ball.object.pos.x, ball.object.pos.y
+//         ),
+//         320,
+//         12,
+//         20,
+//         Color::BLACK,
+//     );
+//     render_pitch(d, &pitch);
+//     for visibleplayer in team1VisiblePlayers.iter() {
+//         visibleplayer.draw(d, alpha);
+//     }
+//     for visibleplayer in team2VisiblePlayers.iter() {
+//         visibleplayer.draw(d, alpha);
+//     }
+//     d.draw_text(&format!("{}", d.get_fps()), 100, 12, 10, Color::BLACK);
+//     ball.display_ball(d, alpha);
+//     d.draw_text(
+//         &format!("Ball speed x: {}", ball.object.x_velocity),
+//         200,
+//         120,
+//         10,
+//         Color::BLACK,
+//     );
+//     d.draw_text(
+//         &format!("Ball speed y: {}", ball.object.y_velocity),
+//         200,
+//         100,
+//         10,
+//         Color::BLACK,
+//     );
+
+//     if score > 0 {
+//         d.draw_text(&format!("Score is {:?}", score), 10, 200, 5, Color::GOLD)
+//     }
+// }
