@@ -117,62 +117,6 @@ async fn main() {
     }
 }
 
-// fn log_game_state(con: &mut redis::Connection, ball: &Ball, team1VisiblePlayers: & Vec<VisiblePlayer<'_>>, team2VisiblePlayers: & Vec<VisiblePlayer<'_>>, pitch: &Pitch, score: u8) {
-//     ball.log_in_redis(con, "ball");
-//     for player in team1VisiblePlayers.into_iter() {
-//         player.log_in_redis(con, player.player.name.as_str());
-//     }
-//     for player in team2VisiblePlayers.into_iter() {
-//         player.log_in_redis(con, player.player.name.as_str());
-//     }
-//     // let idk = con.publish("channel1", ball.object.pos.x);
-//     // match idk {
-//     //     Ok(value) => value,
-//     //     _ => {}
-//     // }
-// }
-
-// pub trait LogInRedis {
-//     fn log_in_redis(&self, con: &mut redis::Connection, channel: &str)
-//     where
-//         Self: serde::Serialize {
-//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
-//         let succ = con.publish(channel, json_string);
-//         match succ {
-//             Ok(value) => value,
-//             _ => panic!("Failed to write to redis for ball")
-//         };
-
-//     }
-// }
-// impl LogInRedis for Ball {}
-// impl LogInRedis for Player {}
-// impl LogInRedis for VisiblePlayer<'_> {}
-
-// ### by using the default implementation above (using the where Self: serde::Serialize)
-// ### I was able to remove the redundent boilerplate below
-
-// impl LogInRedis for Ball {
-//     fn log_in_redis(&self, con: &mut redis::Connection) {
-//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
-//         let succ = con.publish("channel1", json_string);
-//         match succ {
-//             Ok(value) => value,
-//             _ => panic!("Failed to write to redis for ball")
-//         };
-//     }
-// }
-
-// impl LogInRedis for Player {
-//     fn log_in_redis(&self, con: &mut redis::Connection) {
-//         let json_string = serde_json::to_string(&self).expect("Failed to deserialize ball");
-//         let succ = con.publish("channel1", json_string);
-//         match succ {
-//             Ok(value) => value,
-//             _ => panic!("Failed to write to redis for ball")
-//         };
-//     }
-// }
 
 fn apply_physics_new(qgl: &mut QuadGl, state: &mut GameState) {
     if is_key_down(KeyCode::Enter) {
@@ -204,55 +148,19 @@ fn apply_physics_new(qgl: &mut QuadGl, state: &mut GameState) {
         visibleplayer.new_handle_user_movement(qgl, PHYSICS_TICK_RATE);
         visibleplayer.handle_physics(&state.pitch, PHYSICS_TICK_RATE);
     }
+    let goal = &state.pitch.check_goal(&state.ball);
+    match goal {
+        Some(g) => {
+            println!("hi, there appears to be a goal for {:?}", g);
+            match g {
+                Goal::HOME => state.score = 1,
+                Goal::AWAY => state.score = 2,
+            }
+        }
+        _ => {}
+    }
 }
 
-// fn apply_physics(
-//     rl: &mut RaylibHandle,
-//     ball: &mut Ball,
-//     team1VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
-//     team2VisiblePlayers: &mut Vec<VisiblePlayer<'_>>,
-//     pitch: &Pitch,
-//     score: &mut u8,
-// ) {
-//     if rl.is_key_down(KeyboardKey::KEY_ENTER) {
-//         println!("kicking ball");
-//         // todo: going thing.object.apply_force is cumbersome
-//         // can instead use traits to add apply_force method to both ball & visibleplayer
-//         ball.object.apply_force(8.0, -8.0, PHYSICS_TICK_RATE);
-//     }
-//     ball.object.apply_friction(PHYSICS_TICK_RATE);
-//     ball.object.update_position(&pitch, PHYSICS_TICK_RATE);
-//     for visibleplayer in team1VisiblePlayers.iter_mut() {
-//         if visibleplayer.is_movable() & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
-//             let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
-//             let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-//             visibleplayer.handle_kick_ball(ball, x_dir, y_dir, PHYSICS_TICK_RATE);
-//         }
-//         visibleplayer.handle_user_movement(rl, PHYSICS_TICK_RATE);
-//         visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-//     }
-//     for visibleplayer in team2VisiblePlayers.iter_mut() {
-//         if visibleplayer.is_movable() & rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
-//             let x_dir = rl.get_mouse_x().as_f32() - visibleplayer.object.pos.x;
-//             let y_dir = rl.get_mouse_y().as_f32() - visibleplayer.object.pos.y;
-//             visibleplayer.handle_kick_ball(ball, x_dir, y_dir, PHYSICS_TICK_RATE);
-//         }
-//         visibleplayer.handle_user_movement(rl, PHYSICS_TICK_RATE);
-//         visibleplayer.handle_physics(&pitch, PHYSICS_TICK_RATE);
-//     }
-//     let goal = pitch.check_goal(&ball);
-//     match goal {
-//         Some(g) => {
-//             println!("hi, there appears to be a goal for {:?}", g);
-//             match g {
-//                 Goal::HOME => *score = 1,
-//                 Goal::AWAY => *score = 2,
-//             }
-//         }
-//         _ => {}
-//     }
-//     // should always log state at the end of the game
-// }
 
 pub struct GameState<'a> {
     pub ball: &'a mut Ball,

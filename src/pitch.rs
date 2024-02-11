@@ -1,4 +1,5 @@
 use crate::ball::Ball;
+use crate::gameobject::GameObject;
 use crate::window::ScreenSize;
 use macroquad::color::PINK;
 use macroquad::math::{Rect, Vec2};
@@ -56,28 +57,24 @@ impl Pitch {
         (rect1, rect2)
     }
 
-    // argggghhhh, doesn't have this ez func
     pub fn check_goal(&self, ball: &Ball) -> Option<Goal> {
-        let center = Vec2 {
-            x: ball.object.pos.x,
-            y: ball.object.pos.y,
-        };
-        return None;
+        if check_collision_ball_rect(&ball.object, &self.left_goal) {
+            return Some(Goal::HOME)
+        }
+        if check_collision_ball_rect(&ball.object, &self.right_goal) {
+            return Some(Goal::AWAY)
+        }
+        return None
     }
-    //     if self
-    //         .left_goal
-    //         .check_collision_circle_rec(center, ball.object.radius)
-    //     {
-    //         Some(Goal::AWAY)
-    //     } else if self
-    //         .right_goal
-    //         .check_collision_circle_rec(center, ball.object.radius)
-    //     {
-    //         Some(Goal::HOME)
-    //     } else {
-    //         None
-    //     }
-    // }
+}
+
+fn check_collision_ball_rect(ball_obj: &GameObject, goal: &Rect) -> bool {
+    let closest_x = clamp(ball_obj.pos.x, goal.x, goal.x + goal.w);
+    let closest_y = clamp(ball_obj.pos.y, goal.y, goal.y + goal.h);
+    let dist_x = ball_obj.pos.x - closest_x;
+    let dist_y = ball_obj.pos.y - closest_y;
+    let distance_squared = dist_x.powi(2) + dist_y.powi(2);
+    distance_squared <= ball_obj.radius.powi(2)
 }
 
 pub fn new_render_pitch(_qgl: &mut QuadGl, pitch: &Pitch) {
@@ -165,68 +162,3 @@ pub fn new_render_pitch(_qgl: &mut QuadGl, pitch: &Pitch) {
         );
     }
 }
-
-// pub fn render_pitch(d: &mut RaylibDrawHandle, pitch: &Pitch) {
-//     // 10% inset
-//     let pitch_x = pitch.x;
-//     let pitch_y = pitch.y;
-//     let pitch_width = pitch.width;
-//     let pitch_height = pitch.height;
-
-//     {
-//         // pitch outskirts
-//         d.draw_rectangle_lines(pitch_x, pitch_y, pitch_width, pitch_height, Color::BLACK)
-//     }
-//     {
-//         // center circle
-//         let pos_x = ((pitch_width as f32) * 0.5).round() as i32 + pitch_x;
-//         let pos_y = ((pitch_height as f32) * 0.5).round() as i32 + pitch_y;
-//         let radius = 30.0;
-//         d.draw_circle_lines(pos_x, pos_y, radius, Color::BLACK)
-//     }
-//     {
-//         // center line
-//         let pos_x = ((pitch_width as f32) * 0.5).round() as i32 + pitch_x;
-//         let start_pos_y = pitch_y;
-//         let end_pos_y = pitch_y + pitch_height;
-//         d.draw_line(pos_x, start_pos_y, pos_x, end_pos_y, Color::BLACK)
-//     }
-//     {
-//         // goal lines
-//         let mut pos_x = pitch.x;
-//         let start_pos_y = (pitch.y as f32) + (pitch.height as f32 / 2.0) - (GOAL_LENGTH / 2.0);
-//         let end_pos_y = (pitch.y as f32) + (pitch.height as f32 / 2.0) + (GOAL_LENGTH / 2.0);
-//         d.draw_line(
-//             pos_x,
-//             start_pos_y.ceil() as i32,
-//             pos_x,
-//             end_pos_y.round() as i32,
-//             Color::ORANGE,
-//         );
-
-//         pos_x = pitch.x + pitch.width;
-//         d.draw_line(
-//             pos_x,
-//             start_pos_y.round() as i32,
-//             pos_x,
-//             end_pos_y.round() as i32,
-//             Color::ORANGE,
-//         );
-//     }
-//     {
-//         d.draw_rectangle(
-//             pitch.left_goal.x as i32,
-//             pitch.left_goal.y as i32,
-//             pitch.left_goal.w as i32,
-//             pitch.left_goal.h as i32,
-//             ,
-//         );
-//         d.draw_rectangle(
-//             pitch.right_goal.x as i32,
-//             pitch.right_goal.y as i32,
-//             pitch.right_goal.w as i32,
-//             pitch.right_goal.h as i32,
-//             Color::PINK,
-//         );
-//     }
-// }
