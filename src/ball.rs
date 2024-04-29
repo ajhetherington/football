@@ -1,8 +1,9 @@
 use crate::gameobject::GameObject;
 use macroquad::prelude::*;
 use macroquad::shapes::draw_circle;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Ball {
     pub object: GameObject,
 }

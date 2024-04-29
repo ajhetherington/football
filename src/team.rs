@@ -1,33 +1,61 @@
+use serde::{Deserialize, Serialize};
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use crate::player::Player;
+use crate::position::Position;
+use crate::visibleplayer::VisiblePlayer;
 
-
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum TeamSide {
     Home,
-    Away
+    Away,
 }
 
-#[derive(Debug)]
-pub struct Team<'a> {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Team {
     pub name: String,
-    pub players: [&'a Player; 5], // Array of references to 5 player objects
+    // todo: implement serialization for this
+    #[serde(skip)] 
+    pub players: Vec<Rc<RefCell<VisiblePlayer>>>, // Array of references to 5 player objects
     pub side: TeamSide,
 }
 
-impl<'a> Team<'a> {
-    pub fn new(name: String, players: [&'a Player; 5], team_side: TeamSide) -> Self {
-            Team { name, players, side: team_side }
+impl Team {
+    pub fn new(
+        name: String,
+        players: Vec<Rc<RefCell<VisiblePlayer>>>,
+        team_side: TeamSide,
+    ) -> Self {
+
+        Team {
+            name,
+            players: players,
+            side: team_side,
+        }
+    }
+    
+    pub fn make_visible(players: Vec<Player>, positions: Vec<Position>) -> Vec<VisiblePlayer> {
+        let mut visible_players: Vec<VisiblePlayer> = Vec::new();
+        for (position, player) in positions.iter().zip(players.iter()) {
+            visible_players.push(VisiblePlayer::new(
+                player.clone(), // bc i am lazy
+                position.x,
+                position.y,
+                macroquad::color::RED,
+            ))
+        }
+        visible_players
+
     }
 
-    pub fn generate_players() -> [Player; 5] {
-        let player_names = ["player1", "player2", "player3", "player4", "player5"];
-        let players = [
-            Player::new(player_names[0].to_string(), 1).unwrap(),
-            Player::new(player_names[1].to_string(), 2).unwrap(),
-            Player::new(player_names[2].to_string(), 3).unwrap(),
-            Player::new(player_names[3].to_string(), 4).unwrap(),
-            Player::new(player_names[4].to_string(), 5).unwrap(),
-        ];
+    pub fn generate_players(n_players: usize) -> Vec<Player> {
+        // VisiblePlayer::new(player, x, y, color)
+        let mut players: Vec<Player> = vec![];
+        for i in 0..n_players {
+            // todo: use faker to make fake names for players
+            players.push(Player::new(format!("player-{}", i), i))
+        }
         players
     }
 }

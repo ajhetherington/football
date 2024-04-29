@@ -1,23 +1,59 @@
 use crate::ball::Ball;
-use crate::gameobject::GameObject;
 use crate::window::ScreenSize;
 use macroquad::color::PINK;
-use macroquad::math::{Rect, Vec2};
+use macroquad::math::Rect;
 use macroquad::prelude::*;
+use serde::{Serialize, Deserialize};
 
 const GOAL_LENGTH: f32 = 70.0;
 const RECT_WIDTH: f32 = 6.0;
 
+
+// Serde workaround due to the orphan rule
+// "you can only implement a trait for a type if 
+// either the trait or the type is defined in your crate"
+// 
+// remote gives path to the type we want to derive for
+#[derive(Serialize, Deserialize)]
+#[serde(remote="Rect")]
+struct RectDef {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl From<Rect> for RectDef {
+    fn from(value: Rect) -> Self {
+        RectDef { x: value.x, y: value.y, w: value.w, h: value.h }
+    }
+}
+
+impl From<RectDef> for Rect {
+    fn from(value: RectDef) -> Self {
+        Rect { x: value.x, y: value.y, w: value.w, h: value.h }
+    }
+}
+
+
+
+/// The pitch where the ball and all players are within, also contains
+/// the goals, each of which are rectangles 'within' the pitch boundary
+/// for convenience
+#[derive(Serialize, Deserialize)]
 pub struct Pitch {
     pub x: i32,
     pub y: i32,
     pub width: i32,
     pub height: i32,
+    // point to type serde will point to
+    #[serde(with="RectDef")]
     left_goal: Rect,
+    #[serde(with="RectDef")]
     right_goal: Rect,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Goal {
     HOME,
     AWAY,
@@ -58,17 +94,20 @@ impl Pitch {
     }
 
     pub fn check_goal(&self, ball: &Ball) -> Option<Goal> {
-        if check_collision_ball_rect(&ball.object, &self.left_goal) {
+        if check_collision_ball_rect(&ball, &self.left_goal) {
             return Some(Goal::HOME)
         }
-        if check_collision_ball_rect(&ball.object, &self.right_goal) {
+        if check_collision_ball_rect(&ball, &self.right_goal) {
             return Some(Goal::AWAY)
         }
         return None
     }
 }
 
-fn check_collision_ball_rect(ball_obj: &GameObject, goal: &Rect) -> bool {
+/// Checks whether a ball is overlapping with the goal
+/// i.e. when a goal has been scored
+fn check_collision_ball_rect(ball: &Ball, goal: &Rect) -> bool {
+    let ball_obj = ball.object;
     let closest_x = clamp(ball_obj.pos.x, goal.x, goal.x + goal.w);
     let closest_y = clamp(ball_obj.pos.y, goal.y, goal.y + goal.h);
     let dist_x = ball_obj.pos.x - closest_x;

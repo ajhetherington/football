@@ -58,3 +58,6 @@ One quick thought, there's no real difference between passing and shooting, they
 
 ### Also todo:
 When the player kicks the ball, should the ball also get more momentum from 'hitting' the foot? akin to the ball hitting the sides of the pitch?
+
+## Other notes
+I can probably add back in redis state logging by using a feature flag.

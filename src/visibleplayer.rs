@@ -7,6 +7,7 @@ use macroquad::input::is_key_down;
 use macroquad::miniquad::KeyCode;
 use macroquad::prelude::QuadGl;
 use macroquad::shapes::draw_circle;
+use serde::{Deserialize, Serialize};
 
 enum PlayerActions {
     Shoot,
@@ -15,17 +16,18 @@ enum PlayerActions {
     NoAction,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 
-pub struct VisiblePlayer<'a> {
-    pub player: &'a Player,
+pub struct VisiblePlayer {
+    pub player: Player,
     pub object: GameObject,
     movable: bool,
+    #[serde(skip)]
     color: Color,
 }
 
-impl<'a> VisiblePlayer<'a> {
-    pub fn new(player: &'a Player, x: f32, y: f32, color: Color) -> Self {
+impl<'a> VisiblePlayer {
+    pub fn new(player: Player, x: f32, y: f32, color: Color) -> Self {
         return VisiblePlayer {
             player,
             object: GameObject::new(x, y, 8.0, 2.0, 0.8),
@@ -36,12 +38,12 @@ impl<'a> VisiblePlayer<'a> {
     pub fn to_movable(&mut self) {
         self.movable = true;
     }
-    pub fn is_movable(self) -> bool {
+    pub fn is_movable(&self) -> bool {
         self.movable
     }
 
     pub fn new_handle_user_movement(&mut self, _qgl: &mut QuadGl, dt: f32) {
-        let movement_force = (self.player.physicals.strength as f32) * 10.0;
+        let movement_force = (self.player.physicals.speed as f32) * 10.0;
         if !(self.movable) {
             return;
         }
@@ -60,7 +62,7 @@ impl<'a> VisiblePlayer<'a> {
         }
     }
 
-    pub fn handle_kick_ball(&mut self, ball: &mut Ball, x_dir: f32, y_dir: f32, dt: f32) {
+    pub fn handle_kick_ball(&self, ball: &mut Ball, x_dir: f32, y_dir: f32, dt: f32) {
         // ok, so first check whether we can hit the ball
         // then just apply a big force in a particular direction
         if !(self.movable) {
