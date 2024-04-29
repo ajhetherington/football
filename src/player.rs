@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SkillProfile {
-    pub technique: i32,
+    pub technique: f32,
 }
 
 impl SkillProfile {
     pub fn new() -> Result<SkillProfile, String> {
         Ok(SkillProfile {
-            technique: 5,
+            technique: 5.0,
         })
     }
 }
@@ -45,4 +45,5 @@ impl Player {
             physicals: PhysicalProfile::new().unwrap(),
         }
     }
+
 }

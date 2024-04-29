@@ -2,12 +2,14 @@ use crate::ball::Ball;
 use crate::gameobject::GameObject;
 use crate::pitch::Pitch;
 use crate::player::Player;
-use macroquad::color::Color;
+use macroquad::{color::Color, rand};
 use macroquad::input::is_key_down;
 use macroquad::miniquad::KeyCode;
 use macroquad::prelude::QuadGl;
 use macroquad::shapes::draw_circle;
 use serde::{Deserialize, Serialize};
+use rand::gen_range;
+
 
 enum PlayerActions {
     Shoot,
@@ -68,11 +70,24 @@ impl<'a> VisiblePlayer {
         if !(self.movable) {
             return;
         }
+
+        let x_offset = gen_range::<f32>(0.0, 50.0) * (1.0 - (self.player.skills.technique)/10.0);
+        let y_offset = gen_range::<f32>(0.0, 50.0) * (1.0 - (self.player.skills.technique) / 10.0);
+        println!("{}", x_dir);
+        let x_dir = x_dir + x_offset - 0.5*(1.0 - (self.player.skills.technique)/10.0);
+        println!("{}", x_dir);
+        let y_dir = y_dir + y_offset - 0.5*(1.0 - (self.player.skills.technique)/10.0);
         let (x_partial, y_partial) = normalize(x_dir, y_dir);
+
+        // cap the magnitude of x & y, this later get's multiplied by player's strength
+        // this allows the agent to do a more or less powerful kick
+        let magnitude = (x_dir.powf(2.0) + y_dir.powf(2.0)).sqrt().min(10.0);
+        if magnitude == 10.0 {
+            println!("at maximum")
+        }
+
         let mut force = self.player.physicals.strength as f32;
-        force *= 20.0;
-        force += 100.0;
-        let accuracy = self.player.skills.technique as f32;
+        force *= magnitude;
 
         ball.object
             .apply_force(force * x_partial, force * y_partial, dt)

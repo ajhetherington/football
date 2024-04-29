@@ -114,8 +114,6 @@ impl GameObject {
 pub fn arange_checks(objects: &mut Vec<Rc<RefCell<VisiblePlayer>>>, radius: f32) {
     // println!("{:?}",objects);
     objects.sort_by(|a, b|  {
-        println!("{:?}", a);
-        println!("{:?}", b);
         match a.borrow().object.pos.x.partial_cmp(&b.borrow().object.pos.x) {
             Some(val) => val,
             None => panic!("{:?} - {:?}", a.borrow().object.pos.x, b.borrow().object.pos.x)
@@ -133,7 +131,6 @@ pub fn arange_checks(objects: &mut Vec<Rc<RefCell<VisiblePlayer>>>, radius: f32)
                 break
             }
             if (obj.borrow().object.pos.x - objects[i].borrow().object.pos.x).abs() < radius {
-                println!("this {:?}",(obj.borrow().object.pos.x - objects[i].borrow().object.pos.x).abs());
                 combo_s.push((index, i));
                 i += 1;
                 continue
@@ -164,7 +161,6 @@ pub fn old_check_player_collisions(
         return
     }
 
-    println!("past early return {:?} {:?}", object_a, object_b);
     let distance = sequared_term.sqrt();
     let dir_x = (object_b.pos.x - object_a.pos.x) / distance;
     let dir_y = (object_b.pos.y - object_a.pos.y) / distance;
