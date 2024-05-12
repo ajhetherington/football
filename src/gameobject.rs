@@ -111,12 +111,12 @@ impl GameObject {
 
 
 /// objects comprises all players in the pitch
-pub fn arange_checks(objects: &mut Vec<Rc<RefCell<VisiblePlayer>>>, radius: f32) {
+pub fn arange_checks(objects: &mut Vec<VisiblePlayer>, radius: f32) {
     // println!("{:?}",objects);
     objects.sort_by(|a, b|  {
-        match a.borrow().object.pos.x.partial_cmp(&b.borrow().object.pos.x) {
+        match a.object.pos.x.partial_cmp(&b.object.pos.x) {
             Some(val) => val,
-            None => panic!("{:?} - {:?}", a.borrow().object.pos.x, b.borrow().object.pos.x)
+            None => panic!("{:?} - {:?}", a.object.pos.x, b.object.pos.x)
 
         }
     }
@@ -130,7 +130,7 @@ pub fn arange_checks(objects: &mut Vec<Rc<RefCell<VisiblePlayer>>>, radius: f32)
             if i > largest_index {
                 break
             }
-            if (obj.borrow().object.pos.x - objects[i].borrow().object.pos.x).abs() < radius {
+            if (obj.object.pos.x - objects[i].object.pos.x).abs() < radius {
                 combo_s.push((index, i));
                 i += 1;
                 continue
@@ -141,8 +141,9 @@ pub fn arange_checks(objects: &mut Vec<Rc<RefCell<VisiblePlayer>>>, radius: f32)
 
     for (index_a, index_b) in combo_s {
         assert_ne!(index_a, index_b, "Indices must be different.");
-        let p1 = &mut objects[index_a].borrow_mut().object;
-        let p2 = &mut objects[index_b].borrow_mut().object;
+        let (first,second) = objects.split_at_mut(index_b);
+        let p1 = &mut first[index_a].object;
+        let p2 = &mut second[0].object;
         // check_player_collisions(p1, p2);
         inelastic_check_player_collisions(p1, p2);
     }

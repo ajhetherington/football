@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::TeamSide;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SkillProfile {
     pub technique: f32,
@@ -34,15 +36,17 @@ pub struct Player {
     pub number: usize,
     pub skills: SkillProfile,
     pub physicals: PhysicalProfile,
+    pub team: Option<TeamSide>,
 }
 
 impl Player {
-    pub fn new(name: String, number: usize) -> Player {
+    pub fn new(name: String, number: usize, side: Option<TeamSide>) -> Player {
         Player {
             name,
             number,
             skills: SkillProfile::new().unwrap(),
             physicals: PhysicalProfile::new().unwrap(),
+            team: side,
         }
     }
 

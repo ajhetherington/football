@@ -15,7 +15,7 @@ impl Ball {
         };
     }
 
-    pub fn new_render(&mut self, _qgl: &mut QuadGl, alpha: f32) {
+    pub fn render(&mut self, _qgl: &mut QuadGl, alpha: f32) {
         draw_circle(
             self.object.pos.interpolate_x(alpha),
             self.object.pos.interpolate_y(alpha),

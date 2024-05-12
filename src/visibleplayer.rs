@@ -44,7 +44,7 @@ impl<'a> VisiblePlayer {
         self.movable
     }
 
-    pub fn new_handle_user_movement(&mut self, _qgl: &mut QuadGl, dt: f32) {
+    pub fn handle_user_movement(&mut self, _qgl: &mut QuadGl, dt: f32) {
         let movement_force = (self.player.physicals.speed as f32) * 10.0;
         if !(self.movable) {
             return;
@@ -98,7 +98,7 @@ impl<'a> VisiblePlayer {
         self.object.update_position(pitch, dt);
     }
 
-    pub fn new_render(&self, _qgl: &mut QuadGl, alpha: f32) {
+    pub fn render(&self, _qgl: &mut QuadGl, alpha: f32) {
         draw_circle(
             self.object.pos.interpolate_x(alpha),
             self.object.pos.interpolate_y(alpha),

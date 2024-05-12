@@ -9,13 +9,12 @@ const GOAL_LENGTH: f32 = 70.0;
 const RECT_WIDTH: f32 = 6.0;
 
 
-// Serde workaround due to the orphan rule
-// "you can only implement a trait for a type if 
-// either the trait or the type is defined in your crate"
-// 
-// remote gives path to the type we want to derive for
 #[derive(Serialize, Deserialize)]
+// remote gives path to the type we want to derive for
 #[serde(remote="Rect")]
+/// Serde workaround due to the orphan rule
+/// "you can only implement a trait for a type if 
+/// either the trait or the type is defined in your crate"
 struct RectDef {
     pub x: f32,
     pub y: f32,
@@ -55,12 +54,14 @@ pub struct Pitch {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Goal {
+
     HOME,
     AWAY,
 }
 
 impl Pitch {
     pub fn new(screen_size: &ScreenSize) -> Self {
+        //! Create a new pitch object from given screen size
         let x = ((screen_size.width as f32) * 0.1).round() as i32;
         let y = ((screen_size.height as f32) * 0.1).round() as i32;
         let width = ((screen_size.width as f32) * 0.8).round() as i32;
@@ -94,6 +95,8 @@ impl Pitch {
     }
 
     pub fn check_goal(&self, ball: &Ball) -> Option<Goal> {
+        //! Checks when there is a goal
+        //! Todo: implement re-kickoff after goal
         if check_collision_ball_rect(&ball, &self.left_goal) {
             return Some(Goal::HOME)
         }
@@ -116,7 +119,8 @@ fn check_collision_ball_rect(ball: &Ball, goal: &Rect) -> bool {
     distance_squared <= ball_obj.radius.powi(2)
 }
 
-pub fn new_render_pitch(_qgl: &mut QuadGl, pitch: &Pitch) {
+pub fn render_pitch(_qgl: &mut QuadGl, pitch: &Pitch) {
+    //! Render the pitch on the screen
     let pitch_x = pitch.x;
     let pitch_y = pitch.y;
     let pitch_width = pitch.width;
