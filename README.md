@@ -24,3 +24,13 @@ Then after the engine is good enough:
 * write gamestate to redis? get python daemon to read from it & write actions for the players
 * train ai's for each team
 * &/or train ai's for each player
+
+
+# What's left?
+- [x] Player can only kick ball if it's within proximity
+- [ ] Player cannot kick ball every frame, allow the action to still be taken, but have no effect, causing agent's to learn this behaviour itself.
+- [x] When game kicks off, ball should go in a random direction
+- [ ] Add transport for actions to be received (game states already written to redis queue)
+- [ ] Replace redis with open source alternative
+- [ ] Allow training without requiring the game to be rendered
+- [ ] Save games to disk

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::TeamSide;
 
@@ -37,6 +38,7 @@ pub struct Player {
     pub skills: SkillProfile,
     pub physicals: PhysicalProfile,
     pub team: Option<TeamSide>,
+    pub uuid: String,
 }
 
 impl Player {
@@ -47,6 +49,7 @@ impl Player {
             skills: SkillProfile::new().unwrap(),
             physicals: PhysicalProfile::new().unwrap(),
             team: side,
+            uuid: Uuid::new_v4().to_string()
         }
     }
 
