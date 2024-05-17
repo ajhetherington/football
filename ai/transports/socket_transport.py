@@ -73,8 +73,6 @@ class TCPTransport(Transport):
                     parsed = jsn
 
                 except json.decoder.JSONDecodeError as e:
-                    logger.info(decoded)
-                    print("after")
                     logger.exception(e)
                     logger.warning("Couldn't deserialize json in tcp transport")
                     parsed = {}

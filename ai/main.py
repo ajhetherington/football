@@ -32,8 +32,10 @@ def main():
     next(a)
     while True:
         frame = a.send("state")
+        print(frame)
         # do stuff
         sleep(3)
+
 
 
 if __name__ == "__main__":
