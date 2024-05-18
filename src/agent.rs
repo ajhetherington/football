@@ -40,7 +40,7 @@ pub fn random_action() -> AgentAction {
     let kick: bool = kick_float.round() != 0.0;
 
     let movement = match rand::gen_range(0, 3) {
-        0 => vec![MovementAction::Up],
+    0 => vec![MovementAction::Up],
         1 => vec![MovementAction::Down],
         2 => vec![MovementAction::Left],
         3 => vec![MovementAction::Right],

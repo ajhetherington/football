@@ -13,17 +13,16 @@ for response in get_data(21878):
 """
 
 import socket
-import threading
-from functools import partial
 import json
 from time import sleep
 from typing import Generator
 from ai.transports import Transport
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
-END_OF_FILE = b"EOF"
+END_OF_FILE = os.environ.get("END_OF_FILE", "EOF").encode('utf-8')
 
 class TCPTransport(Transport):
 
@@ -48,17 +47,22 @@ class TCPTransport(Transport):
         i = 1
         while True:
             logger.info(i)
+            i += 1
+            print('starting conenction')
             sock = _poll_for_connection(self.host, self.port)
+            print('after new connection')
             sock.settimeout(30)
             buffer = b''
             while True:
                 try:
                     data: bytes = sock.recv(1024)
                 except ConnectionResetError:
+                    print("new connection")
                     break
                 if data:
                     if END_OF_FILE in data:
                         # cutoff END_OF_FILE token
+                        print('got end of file')
                         buffer += data[:(data.index(END_OF_FILE))]
                         break
                     buffer += data
@@ -79,8 +83,10 @@ class TCPTransport(Transport):
                     pass
                 
                 message = yield parsed # read in next message
-                print(f'bout to send this message {message}')
-                sock.sendall(message.encode('utf-8'))
+                logger.info(f'bout to send this message {message}')
+                sock.sendall(message.encode('utf-8') + b'\n')
+                logger.info(f"sent: {message.encode('utf-8') + b'\n'}")
+                print('after close')
             
 
 
