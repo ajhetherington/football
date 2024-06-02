@@ -11,10 +11,12 @@ mod team;
 mod transports;
 mod visibleplayer;
 mod window;
+mod config;
 
 use football::get_quad_gl;
 use gamestate::GameState;
-use macroquad::{prelude::*, rand};
+use macroquad::{file, prelude::*, rand};
+use core::panic;
 use std::{borrow::BorrowMut, collections::HashMap, env, time::UNIX_EPOCH};
 
 use ball::*;
@@ -24,6 +26,7 @@ use team::*;
 use uuid::Uuid;
 use visibleplayer::*;
 use window::*;
+use config::read_config;
 
 /// Football
 /// This rust program makes a set of players, puts them in a pitch & simulates something similar to football,
@@ -37,17 +40,27 @@ use crate::transports::tcp_transport::TCPTransport;
 
 const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
 
-fn set_rand_seed() {
-    let seed = time::SystemTime::now()
+fn set_rand_seed(seed: Option<u64>) {
+    let _seed = match seed {
+        Some(seed) => seed,
+        None => {
+            time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs();
-    rand::srand(seed)
+        .as_secs()
+    }
+    };
+    rand::srand(_seed);
 }
 
 #[macroquad::main("Football")]
 async fn main() {
-    set_rand_seed();
+    let config = match env::args().into_iter().nth(1) {
+        Some(path) => read_config(path.as_str()),
+        None => panic!("No path to config")
+    };
+
+    set_rand_seed(config.seed);
     let game_id = Uuid::new_v4().to_string();
     let screen = ScreenSize::new();
 
@@ -98,12 +111,14 @@ async fn main() {
     #[cfg(feature = "use_redis")]
     let client = _redis::setup_redis(game_id);
 
-    let transport = TCPTransport::new("localhost", 21878);
+let transport = TCPTransport::new(&config.env_addr, &config.ai_addr);
 
     state.ball.game_start_kick(PHYSICS_TICK_RATE);
 
     let qgl = get_quad_gl!();
+    let mut i = 0;
     loop {
+        i += 1;
         time_accumulator += get_frame_time();
 
         while time_accumulator >= PHYSICS_TICK_RATE {
@@ -120,6 +135,7 @@ async fn main() {
         }
         let alpha: f32 = time_accumulator / PHYSICS_TICK_RATE;
         render(qgl, &mut state, alpha);
+        get_screen_data().export_png(format!("/Users/alexhetherington/code/football/frames/this.png").as_str());
         next_frame().await
     }
 }

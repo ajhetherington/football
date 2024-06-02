@@ -1,106 +1,87 @@
-use std::{env, vec};
-use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
-use std::time::Duration;
+use std::{
+    io::{BufRead, BufReader, Read, Write},
+    net::{TcpListener, TcpStream}, os::unix::net::SocketAddr,
+    str::from_utf8, thread, time::Duration
+};
 
-use crate::agent::AgentAction;
-use crate::gamestate::GameState;
-use crate::transports::base::Transport;
 
-#[derive(Debug)]
+use macroquad::miniquad::log;
+
+use super::base::Transport;
+
 pub struct TCPTransport {
-    host: String,
-    port: u16,
+    sender: String,
+    receiver: String,
     frame_iter: usize,
-    socket: SocketAddr,
-    listener: TcpListener,
-    eof: String,
 }
 
 impl TCPTransport {
-    pub fn new(host: &str, port: u16) -> Self {
-        let ip: (u8, u8, u8, u8) = match host {
-            "localhost" => (127, 0, 0, 1),
-            _ => {
-                let splits: Vec<&str> = host.split('.').collect();
-                if splits.len() != 4 {
-                    panic!("{host} is not a valid ip");
-                }
-                (
-                    splits[0].parse().unwrap(),
-                    splits[1].parse().unwrap(),
-                    splits[2].parse().unwrap(),
-                    splits[3].parse().unwrap(),
-                )
-            }
-        };
-        let _ip = IpAddr::from(Ipv4Addr::new(ip.0, ip.1, ip.2, ip.3));
-
-        let socket = SocketAddr::new(_ip, port);
-        let mut _listener = TcpListener::bind(socket);
-
-        loop {
-            match _listener {
-                Err(e) => std::thread::sleep(Duration::from_millis(10)),
-                _ => break,
-            }
-            _listener = TcpListener::bind(socket);
-        }
-        let listener = _listener.unwrap();
-
-        let eof = match env::var("END_OF_FILE") {
-            Ok(val) => val,
-            Err(_) => "EOF".to_owned(),
-        };
-
+    pub fn new(client_addr: &str, server_addr: &str) -> Self {
         TCPTransport {
-            host: host.to_string(),
-            port,
+            sender: client_addr.to_owned(),
+            receiver: server_addr.to_owned(),
             frame_iter: 0,
-            listener,
-            socket,
-            eof,
         }
     }
 }
 
 impl Transport for TCPTransport {
-    async fn get_action(&self, state: &GameState) -> Vec<AgentAction> {
-        let mut output = serde_json::to_string(state).unwrap_or("default".to_owned());
-        output += &self.eof;
-        let out_bytes = output.as_bytes();
-
-        // write
-        for stream in self.listener.incoming() {
+    async fn get_action(
+        &self,
+        state: &crate::gamestate::GameState,
+    ) -> Vec<crate::agent::AgentAction> {
+        let output = serde_json::to_string(state).unwrap_or("default".to_owned());
+        let output_bytes = output.as_bytes();
+        println!("here, just about to send stuff to addr {}", self.sender);
+        let sender = TcpListener::bind(self.sender.clone()).unwrap();
+        for stream in sender.incoming() {
+            // write
+            //  stream in sender.incoming() {
             match stream {
                 Ok(mut stream) => {
-                    let _n_bytes = stream.write_all(out_bytes).unwrap();
+                    let size = (output_bytes.len() as u32).to_be_bytes();
+                    println!("{:?}", size.clone());
+                    stream.write(&size).unwrap();
+                    let _n_bytes = stream.write_all(output_bytes).unwrap();
+                    println!("finished sending");
                     break;
                 }
-                Err(e) => {
-                    panic!("failed to get tcp stream")
+                Err(_) => {
+                    panic!("Failed to get tcp stream for sending game state")
                 }
             }
         }
-        println!("before read");
-        let mut buffer = String::new();
+
         // read
-        for stream in self.listener.incoming() {
-            println!("polling stream");
+        let receiver = TcpListener::bind(self.receiver.clone()).unwrap();
+        let mut buffer: Vec<u8> = vec![];
+        println!("just about to get things {}", self.receiver);
+        for stream in receiver.incoming() {
             match stream {
-                Ok(stream) => {
-                    println!("found stream");
-                    let mut reader = BufReader::new(&stream);
-                    let n_bytes = reader.read_line(&mut buffer).unwrap();
-                    println!("n bytes: {:?}", n_bytes);
+                Ok(mut stream) => {
+                    println!("found a tcp stream");
+                    let mut tmp_buffer = [0; 4];
+                    stream.read_exact(&mut tmp_buffer).unwrap();
+                    println!("just read the length");
+
+                    let length = u32::from_be_bytes(tmp_buffer);
+                    println!("found {:?} bits to read", length);
+                    // cannot use vec::with_capacity as that instantiates as 0 length
+                    buffer = vec![0; length as usize];
+                    stream.read_exact(&mut buffer).unwrap();
+                    println!("{:?}", buffer);
                     break;
                 }
-                Err(e) => continue,
+                Err(_) => {
+                    panic!("Failed to get tcp stream for getting actions")
+                }
             }
         }
-        // let output = String::from_utf8(buffer.clone()).unwrap();
-        println!("received buffer: {:?}", buffer.clone());
-        // println!("output: {:?}", output);
-        return serde_json::from_str(&output).unwrap();
+
+        let value = from_utf8(&buffer).unwrap();
+        println!("value: {}", value);
+        thread::sleep(Duration::from_millis(100));
+        serde_json::from_str(value).unwrap()
+
     }
 }

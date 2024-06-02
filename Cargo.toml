@@ -13,6 +13,7 @@ serde = { version="1.0.199", features=["derive"] }
 serde_json ="1.0.116" 
 uuid = { version="1.8.0", features=["v4"] }
 getrandom = { version = "0.2.14", features = ["js"] }
+serde_yaml = "0.9.34"
 
 [features]
 use_redis = ["redis", "uuid/fast-rng"]
