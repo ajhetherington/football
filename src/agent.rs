@@ -40,7 +40,7 @@ pub fn random_action() -> AgentAction {
     let kick: bool = kick_float.round() != 0.0;
 
     let movement = match rand::gen_range(0, 3) {
-        0 => vec![MovementAction::Up],
+    0 => vec![MovementAction::Up],
         1 => vec![MovementAction::Down],
         2 => vec![MovementAction::Left],
         3 => vec![MovementAction::Right],
@@ -52,4 +52,19 @@ pub fn random_action() -> AgentAction {
         kick,
         movement,
     };
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::AgentAction;
+
+    #[test]
+    fn test_parse() {
+        let value = String::from(r#"{"x": 0.028784048146112462, "y": 0.8122766635210845, "kick": false, "movement": ["Right"]}"#);
+        let action= serde_json::from_str::<AgentAction>(value.as_str()).unwrap();
+        println!("{:?}", action);
+
+        
+    }
 }

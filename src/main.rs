@@ -2,30 +2,31 @@ mod _redis;
 mod agent;
 mod ball;
 mod gameobject;
+mod gamestate;
 mod getstate;
 mod pitch;
 mod player;
 mod position;
 mod team;
+mod transports;
 mod visibleplayer;
 mod window;
+mod config;
 
-use agent::{make_random_actions, AgentAction};
 use football::get_quad_gl;
-use gameobject::GameObject;
-use macroquad::{prelude::*, rand};
-use std::{borrow::BorrowMut, collections::HashMap, env, hash::Hash, time::UNIX_EPOCH};
+use gamestate::GameState;
+use macroquad::{file, prelude::*, rand};
+use core::panic;
+use std::{borrow::BorrowMut, collections::HashMap, env, time::UNIX_EPOCH};
 
 use ball::*;
 use pitch::*;
-use player::Player;
-use position::Position;
-use serde::{self, Deserialize, Serialize};
+use std::time;
 use team::*;
 use uuid::Uuid;
 use visibleplayer::*;
 use window::*;
-use std::time;
+use config::read_config;
 
 /// Football
 /// This rust program makes a set of players, puts them in a pitch & simulates something similar to football,
@@ -35,16 +36,31 @@ use std::time;
 #[cfg(feature = "use_redis")]
 use redis;
 
+use crate::transports::tcp_transport::TCPTransport;
+
 const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
 
-fn set_rand_seed() {
-    let seed = time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    rand::srand(seed)
+fn set_rand_seed(seed: Option<u64>) {
+    let _seed = match seed {
+        Some(seed) => seed,
+        None => {
+            time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+    }
+    };
+    rand::srand(_seed);
 }
 
 #[macroquad::main("Football")]
 async fn main() {
-    set_rand_seed();
+    let config = match env::args().into_iter().nth(1) {
+        Some(path) => read_config(path.as_str()),
+        None => panic!("No path to config")
+    };
+
+    set_rand_seed(config.seed);
     let game_id = Uuid::new_v4().to_string();
     let screen = ScreenSize::new();
 
@@ -61,9 +77,9 @@ async fn main() {
     let team2_players = Team::generate_players(n_players / 2);
 
     let team1 = Team::new(String::from("Team 1"), TeamSide::Home);
-    let mut team1_players = team1.setup_team(&team1_players, &pitch);
+    let team1_players = team1.setup_team(&team1_players, &pitch);
     let team2 = Team::new(String::from("Team 2"), TeamSide::Away);
-    let mut team2_players = team2.setup_team(&team2_players, &pitch);
+    let team2_players = team2.setup_team(&team2_players, &pitch);
     let mut all_players = [team1_players.clone(), team2_players.clone()].concat();
 
     const PHYSICS_TICK_RATE: f32 = 1.0 / 30.0; // in seconds
@@ -95,23 +111,31 @@ async fn main() {
     #[cfg(feature = "use_redis")]
     let client = _redis::setup_redis(game_id);
 
+let transport = TCPTransport::new(&config.env_addr, &config.ai_addr);
+
     state.ball.game_start_kick(PHYSICS_TICK_RATE);
 
     let qgl = get_quad_gl!();
+    let mut i = 0;
     loop {
+        i += 1;
         time_accumulator += get_frame_time();
 
         while time_accumulator >= PHYSICS_TICK_RATE {
-            #[cfg(feature = "use_redis")]
-            state.log(&client);
+            // #[cfg(feature = "use_redis")]
+            // state.log(&client);
+            println!("starting transport");
+            let actions = transports::base::Transport::get_action(&transport, &state).await;
+            println!("actions: {:?}", actions);
 
             // todo: replace random actions with reads from redis
-            state.get_random_actions();
+            // state.get_random_actions();
             apply_physics(qgl, &mut state);
             time_accumulator -= PHYSICS_TICK_RATE;
         }
         let alpha: f32 = time_accumulator / PHYSICS_TICK_RATE;
         render(qgl, &mut state, alpha);
+        get_screen_data().export_png(format!("/Users/alexhetherington/code/football/frames/this.png").as_str());
         next_frame().await
     }
 }
@@ -156,35 +180,6 @@ fn apply_physics(qgl: &mut QuadGl, state: &mut GameState) {
             Goal::AWAY => state.score = 2,
         },
         _ => {}
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-/// Contains all information about the state of the game at a given timestep
-/// * p_frame: physics frame, which tick of the physics engine we've hit
-/// * uuid: a String representing curent game id
-/// * ball: the game `Ball`
-/// * team1: the Home `Team`
-/// * team2: the Away `Team`
-/// * pitch: the `Pitch` being played on
-/// * score: todo: fix this
-///
-pub struct GameState {
-    p_frame: i32,
-    pub uuid: String,
-    #[serde(skip)]
-    pub players: Vec<VisiblePlayer>,
-    actions: HashMap<String, AgentAction>,
-    pub ball: Ball,
-    pub team1: Team,
-    pub team2: Team,
-    pub pitch: Pitch,
-    pub score: u8,
-}
-
-impl GameState {
-    fn get_random_actions(&mut self) {
-        self.actions = make_random_actions(&self.players)
     }
 }
 
@@ -235,26 +230,5 @@ fn render(qgl: &mut QuadGl, state: &mut GameState, alpha: f32) {
             5.0,
             macroquad::color::GOLD,
         )
-    }
-}
-
-#[cfg(feature = "use_redis")]
-trait LogRedis {
-    fn log(&self, client: &redis::Client) {}
-
-    fn read_actions(&self, client: &redis::Client) {}
-}
-
-#[cfg(feature = "use_redis")]
-impl LogRedis for GameState {
-    fn log(&self, client: &redis::Client) {
-        let mut con = client.get_connection().unwrap();
-        let state_str = serde_json::to_string(&self).unwrap();
-        _redis::write_redis(&mut con, &self.uuid, state_str.as_str());
-    }
-
-    fn read_actions(&self, client: &redis::Client) {
-        let mut con = client.get_connection().unwrap();
-        let actions: Option<Vec<PlayerAction>> = _redis::read_redis(&mut con, &self.uuid);
     }
 }
